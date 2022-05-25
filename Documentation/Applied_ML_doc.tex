@@ -339,14 +339,15 @@ Vi indsamler historisk minut-data fra \href{https://www.dukascopy.com/swiss/engl
 
 \subsection*{Index'er}
 Fra dataudtrækket fås følgende kolonner:
-\begin{itemize}
-\item \texttt{Local time}
-\item \texttt{Open}
-\item \texttt{High}
-\item \texttt{Low}
-\item \texttt{Close}
-\item \texttt{Volume}
-\end{itemize}
+\begin{equation*} 
+\texttt{Local\_time}
+\quad \texttt{Open}
+\quad \texttt{High}
+\quad \texttt{Low}
+\quad \texttt{Close}
+\quad \texttt{Volume}
+\end{equation*}
+
 Vi ønsker for ting handlet på børser (index, enkeltaktier, ETF'er) at flage åbningstider og omskrive data til dollar-bars.\\
 \\
 For at flage åbningstider laves en ny kolonne, som markerer hvorvidt dette tidsrum er inden børsen åbner (pre-market), efter børsen er lukket (after-market) eller i børsens normale åbningsvindue.
