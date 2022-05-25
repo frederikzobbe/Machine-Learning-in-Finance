@@ -1,6 +1,7 @@
 # Navn: Reading in data
 # Oprettet: 25-05-2022
 # Senest ændret: 25-05-2022
+# Data ligger i onedrive konto SataDtorage@gmail.com, pass: bethlamamifr
 
 ################### CHANGELOG ###########################
 # FZC: Created the document                             #
