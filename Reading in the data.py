@@ -12,4 +12,3 @@
 #########################################################
 
 # 1. Reading in packages
-# Man skal huske at slutte sit script med en tom linje
