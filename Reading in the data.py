@@ -19,8 +19,8 @@ from datetime import datetime
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # 2. Reading in data
-os.chdir("/Users/frederikzobbe/Documents/GitHub/Machine-Learning-in-Finance/Data")
-os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
+#os.chdir("/Users/frederikzobbe/Documents/GitHub/Machine-Learning-in-Finance/Data")
+#os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
 
 date_cols = ['CPHTime']
 #dtypes = [float, float, float, float, float, str, str, datetime, int, int, int, int, int]

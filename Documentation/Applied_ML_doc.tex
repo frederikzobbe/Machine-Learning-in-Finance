@@ -1,0 +1,381 @@
+\documentclass[a4paper,danish,12pt]{article}
+
+\usepackage{hyperref}
+\usepackage{minted} % For code snippets see https://www.overleaf.com/learn/latex/Code_Highlighting_with_minted
+
+\usepackage[utf8]{inputenc}
+\usepackage[danish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{ragged2e,anyfontsize}
+\usepackage{fixltx2e}	
+%Pakke til sidehoved
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+%Pakke til kommentarer
+\usepackage{verbatim}
+
+%Pakke til ny kommando til input
+\newcommand{\tts}[1]{Tid til at sove for #1}
+
+%Dato
+\usepackage{datetime}
+\newdate{date}{27}{04}{1996}
+\date{\displaydate{date}}
+
+%Cirkel omkring objekter
+\usepackage{tikz}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+            \node[shape=circle,draw,inner sep=2pt] (char) {#1};}}
+
+%Tilfældige citater fra Lorem Ipsum
+\usepackage{lipsum}
+
+%Prævention mod flydende objekter
+\usepackage{float}
+
+%Pakke til linje-mellemrum
+\usepackage{parskip}
+\setlength\parskip{\baselineskip}
+
+%Pakke til billeder
+\usepackage{graphicx}
+
+%Pakke til 'clickable' hyperlinks
+\usepackage{hyperref}
+\hypersetup{colorlinks, linkcolor=black}
+
+%Pakke til farvelægning af text
+\usepackage{color}
+
+%Matematikpakker
+\usepackage{mathrsfs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{stackengine}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\newcommand\myeq{\stackrel{\mathclap{\normalfont\mbox{def}}}{=}}
+%\newtheorem{name}{Printed output}
+\newtheorem{defintion}{Definition}
+
+%Midtlerlinje i matricer
+\makeatletter
+\renewcommand*\env@matrix[1][*\c@MaxMatrixCols c]{%
+  \hskip -\arraycolsep
+  \let\@ifnextchar\new@ifnextchar
+  \array{#1}}
+\makeatother
+
+\newcommand{\FF}{\ensuremath{\mathbb F}}
+\newcommand{\NN}{\ensuremath{\mathbb N}}
+\newcommand{\RR}{\ensuremath{\mathbb R}}
+\newcommand{\CC}{\ensuremath{\mathbb C}}
+\newcommand{\ZZ}{\ensuremath{\mathbb Z}}
+\newcommand{\e}{\mathsf{e}}
+\newcommand{\p}{\text{p}}
+\newcommand{\f}{\text{f}}
+\newcommand{\D}{\hspace{2pt}\text{d}}
+
+% Forside KU
+\usepackage{wrapfig}
+\usetikzlibrary{patterns}
+
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+
+%\usepgfplotslibrary{fillbetween}
+\usetikzlibrary{datavisualization}
+\usetikzlibrary{datavisualization.formats.functions}
+\usetikzlibrary{arrows}
+\usepackage{wallpaper}
+
+% Nye kommandoer
+\newcommand{\arctanh}{\ensuremath{\text{arctanh}}}
+\newcommand{\arccosh}{\ensuremath{\text{arccosh}}}
+\newcommand{\arcsinh}{\ensuremath{\text{arcsinh}}}
+
+% Bokse omkring tekst
+\usepackage[framemethod=TikZ]{mdframed}
+\usepackage{lipsum}
+
+% Standard
+\mdfdefinestyle{MyFrame}{%
+	linecolor=black,
+	nobreak = false,
+	outerlinewidth=0.5pt,
+	roundcorner=10pt,
+	innertopmargin=\baselineskip,
+	innerbottommargin=\baselineskip,
+	innerrightmargin=15pt,
+	innerleftmargin=15pt,
+	backgroundcolor=white}
+
+% Highligt af tekst
+\usepackage{color,soul}
+\usepackage{xcolor}
+\usepackage{soul}
+\newcommand{\mathcolorbox}[2]{\colorbox{#1}{$\displaystyle #2$}}
+\newcommand{\hlfancy}[2]{\sethlcolor{#1}\hl{#2}}
+
+% Udvidelse af listesymboler
+\usepackage{enumitem}
+% \begin{enumerate}[label=(\alph*)] små bogstaver
+% \begin{enumerate}[label=(\Alph*)] store bogstaver
+% \begin{enumerate}[label=(\roman*)] romerske tal
+
+\setlength\parindent{0pt}
+
+\usepackage{pgfplots}
+\usetikzlibrary{shadings}
+
+% Indikatorfunktioner
+\usepackage{dsfont}
+
+% Udvidet matematiksymboler
+\usepackage{mathrsfs}
+\usepackage{bbm}
+
+% Stor unionssymbol med limits
+\newcommand{\wbigcup}{\mathop{\widetilde{\bigcup}}\displaylimits}
+
+% Independence symbol
+\newcommand{\indep}{\perp \!\!\! \perp}
+
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks,
+	citecolor=black,
+	filecolor=black,
+	linkcolor=black,
+	urlcolor=black
+}
+
+\usepackage{caption}
+
+% Zobbe END_FOLD
+
+\newcommand{\Rlogo}{\protect\includegraphics[height=1.8ex,keepaspectratio]{Rlogo.pdf}}
+\renewenvironment{description}[1][0pt]
+{\list{}{\labelwidth=0pt \leftmargin=#1
+		\let\makelabel\descriptionlabel}}
+{\endlist}
+\parindent=0pt
+
+%Machine learning usefull stuff
+% Sign operator
+\DeclareMathOperator{\sign}{sign}
+\newcommand{\sgn}[1]{\sign\lr{#1}}
+% KL operator
+\DeclareMathOperator{\KL}{KL}
+% kl operator
+\DeclareMathOperator{\kl}{kl}
+% The entropy
+\let\H\relax
+\DeclareMathOperator{\H}{H}
+% Majority vote
+\DeclareMathOperator{\MV}{MV}
+% Variance
+\DeclareMathOperator{\V}{Var}
+\NewDocumentCommand{\Var}{o}{\V\IfValueT{#1}{\lrs{#1}}}
+% VC
+\DeclareMathOperator{\VC}{VC}
+% VC-dimension
+\newcommand{\dVC}{d_{\VC}}
+% FAT ...
+\DeclareMathOperator{\FAT}{FAT}
+\newcommand{\dfat}{d_{\FAT}}
+\newcommand{\lfat}{\ell_{\FAT}}
+\newcommand{\Lfat}{L_{\FAT}}
+\newcommand{\hatLfat}{\hat L_{\FAT}}
+% Distance
+\DeclareMathOperator{\dist}{dist}
+% Left-right bracket
+\newcommand{\lr}[1]{\left (#1\right)}
+% Left-right square bracket
+\newcommand{\lrs}[1]{\left [#1 \right]}
+% Left-right curly bracket
+\newcommand{\lrc}[1]{\left \{#1\right\}}
+% Left-right absolute value
+\newcommand{\lra}[1]{\left |#1\right|}
+% Left-right upper value
+\newcommand{\lru}[1]{\left \lceil#1\right\rceil}
+% Scalar product
+\newcommand{\vp}[2]{\left \langle #1 , #2 \right \rangle}
+% Expectation symbol with an optional argument
+\NewDocumentCommand{\E}{o}{\mathbb E\IfValueT{#1}{\lrs{#1}}}
+% Indicator function with an optional argument
+\NewDocumentCommand{\1}{o}{\mathds 1{\IfValueT{#1}{\lr{#1}}}}
+% Probability function
+\let\P\undefined
+\NewDocumentCommand{\P}{o}{\mathbb P{\IfValueT{#1}{\lr{#1}}}}
+% A hypothesis space
+\newcommand{\HH}{\mathcal H}
+% A sample space
+\newcommand{\XX}{\mathcal{X}}
+% A label space
+\newcommand{\YY}{\mathcal{Y}}
+% A nicer emptyset symbol
+\let\emptyset\varnothing
+
+\usepackage{listings} % to inlude R code with \begin{lstlisting}[language=R] etc.
+\definecolor{backgroundCol}{rgb}{50, 50, 50}
+\definecolor{commentstyleCol}{rgb}{0.678,0.584,0.686}
+\definecolor{keywordstyleCol}{rgb}{0.737,0.353,0.396}
+\definecolor{stringstyleCol}{rgb}{0.192,0.494,0.8}
+\definecolor{NumCol}{rgb}{0.686,0.059,0.569}
+\definecolor{basicstyleCol}{rgb}{0.345, 0.345, 0.345}       
+\lstset{ 
+	language=R,                     % the language of the code
+	basicstyle=\small  \ttfamily \color{basicstyleCol}, % the size of the fonts that are used for the code
+	%numbers=left,                   % where to put the line-numbers
+	%  numberstyle=\color{green},  % the style that is used for the line-numbers
+	stepnumber=1,                   % the step between two line-numbers. If it is 1, each line
+	% will be numbered
+	numbersep=5pt,                  % how far the line-numbers are from the code
+	backgroundcolor=\color{backgroundCol},  % choose the background color. You must add \usepackage{color}
+	showspaces=false,               % show spaces adding particular underscores
+	showstringspaces=false,         % underline spaces within strings
+	showtabs=false,                 % show tabs within strings adding particular underscores
+	%frame=single,                   % adds a frame around the code
+	%rulecolor=\color{white},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. commens (green here))
+	tabsize=2,                      % sets default tabsize to 2 spaces
+	captionpos=b,                   % sets the caption-position to bottom
+	breaklines=true,                % sets automatic line breaking
+	breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+	keywordstyle=\color{keywordstyleCol},      % keyword style
+	commentstyle=\color{commentstyleCol},   % comment style
+	stringstyle=\color{stringstyleCol},      % string literal style
+	literate=%
+	*{0}{{{\color{NumCol}0}}}1
+	{1}{{{\color{NumCol}1}}}1
+	{2}{{{\color{NumCol}2}}}1
+	{3}{{{\color{NumCol}3}}}1
+	{4}{{{\color{NumCol}4}}}1
+	{5}{{{\color{NumCol}5}}}1
+	{6}{{{\color{NumCol}6}}}1
+	{7}{{{\color{NumCol}7}}}1
+	{8}{{{\color{NumCol}8}}}1
+	{9}{{{\color{NumCol}9}}}1
+}
+
+
+%Header and footter
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Final Project}
+\chead{Applied Machine Learning \quad \quad \quad \quad}
+\rhead{University of Copenhagen}
+\rfoot{Page \thepage{} of \pageref{LastPage}}
+
+\graphicspath{{Billeder/}}
+
+\usemintedstyle{friendly} 
+
+%\input{reference solutions/Latex_Useful_Symbols_and_Macros}
+%\usepackage{graphicx}  % For including images
+%\usepackage{cleveref}  % For references see https://texblog.org/2013/05/06/cleveref-a-clever-way-to-reference-in-latex/
+
+% !TeX TXS-program:pdflatex = pdflatex -synctex=1 -interaction=nonstopmode --shell-escape %.tex
+
+
+\begin{document}
+\tableofcontents
+\newpage
+
+
+
+
+\section{Dataindsamling}
+Planen er at indhente data fra 2018-01-01 til 2022-04-30. Vi vil træne på data fra 2018-01-01 til 2020-31-12, for senere at kunne teste vores modeller på data fra 2021-01-01 til dags dato.
+
+\subsection*{Dukascopy (Schweizisk bank)}
+Vi indsamler historisk minut-data fra \href{https://www.dukascopy.com/swiss/english/marketwatch/historical/}{\textcolor{blue}{dukascopy}}. Vi ønsker at indsamle data fra\\
+\\
+\textbf{Indexer:}
+\begin{itemize}
+\item DAX-indexet (Germany 40)
+\item Dow Jones (UK 100)
+\item Hong Kong (Hong Kong 40)
+\item NASDAQ (USA 100 Technical)
+\item S\&P 500 (USA 500)
+\end{itemize}
+\textbf{Obligationer:}
+\begin{itemize}
+\item US T BOND
+\end{itemize}
+\textbf{Valuta:}
+\begin{itemize}
+\item EUR/USD
+\end{itemize}
+\textbf{Råvarer:}
+\begin{itemize}
+\item Kaffe
+\item Olie
+\item Gas
+\end{itemize}
+\textbf{ETF'er:}
+\begin{itemize}
+\item Emerging market ETF
+\item Growth og value ETF
+\item Real estate ETF
+\end{itemize}
+\textbf{Cryptovaluta:}
+\begin{itemize}
+\item Bitcoin/USD
+\item Ether/USD
+\item Cardano/USD
+\end{itemize}
+
+
+\subsection*{Forbrugerprisindex (Troels' opfordring)}
+
+
+\subsection*{Kaggle competition (Japansk markedsdata)}
+
+
+\section{Databehandling}
+
+\subsection*{Index'er}
+Fra dataudtrækket fås følgende kolonner:
+\begin{equation*} 
+\texttt{Local\_time}
+\quad \texttt{Open}
+\quad \texttt{High}
+\quad \texttt{Low}
+\quad \texttt{Close}
+\quad \texttt{Volume}
+\end{equation*}
+
+Vi ønsker for ting handlet på børser (index, enkeltaktier, ETF'er) at flage åbningstider og omskrive data til dollar-bars.\\
+\\
+For at flage åbningstider laves en ny kolonne, som markerer hvorvidt dette tidsrum er inden børsen åbner (pre-market), efter børsen er lukket (after-market) eller i børsens normale åbningsvindue.
+\\\\
+\textbf{Omskrivning af timeframe-data til dollarbar-data:} \\
+For at omskrive til dollarbars oprettes en ny kolonne \texttt{Mean\_HL} som er den (estimerede) gennemsnitlige handelspris i tidrummet (minuttet):
+\begin{equation*}
+\texttt{Mean\_HL} = \frac{\texttt{High}+\texttt{Low}}{2}
+\end{equation*} 
+Der laves en ny kolonne \texttt{Mean\_OC}, som er gennemsnittet mellem \texttt{Open} og \texttt{Close}:
+\begin{equation*}
+\texttt{Mean\_OC} = \frac{\texttt{Open}+\texttt{Close}}{2}
+\end{equation*} 
+Derefter laves en ny kolonne \texttt{Total\_transaction}, som angiver det beløb der er handlet for i det givne tidsrum (minut):
+\begin{equation*}
+\texttt{Total\_transaction} = \texttt{Volume} \cdot \texttt{Mean\_HL}
+\end{equation*}
+Der skal nu bestemmes et \textbf{dollarbar-cap}, som skal være det beløb en enkelt dollarbar bliver dannet udfra. Ved at køre pandas kommandoen .describe() kan $\max\{ \texttt{Volume} \}$ og $\max\{ \texttt{High} \}$ ses. \textbf{dollarbar-cap} bliver da bestemt som produktet af de to tal afrundet til nærmeste \textit{pæne} tal (for DAX'en fås 78 mia EUR, og der rundes af til 100 mia. EUR). Dette sikrer at der ikke kan være flere dollarbars pr. minut.\\
+\\
+Der laves nu en ny række for hver gang den aggregerede \texttt{Total\_transaction} når det givne \textbf{dollarbar-cap}, og værdierne (\texttt{Local time}, \texttt{Open}, \texttt{High}, \texttt{Low}, \texttt{Close} og \texttt{Volume} = \textbf{dollarbar-cap}) indsættes som den nye dollarbar-række:
+\begin{itemize}
+\item \texttt{Local time} sættes til \texttt{Local time} for den række hvor \textbf{dollarbar-cap} nås (altså den sidste række):
+\item \texttt{Open} er for den første dollarbar \texttt{Open} fra den første timeframe-bar, og for de resterende \texttt{Mean\_OC} fra den timeframe-bar hvor seneste \textbf{dollarbar-cap} blev nået.
+\item \texttt{Close} sættes til \texttt{Mean\_OC} fra den timeframe-bar hvor \textbf{dollarbar-cap} nås.
+\item \texttt{High} sættes til $\max\{ \texttt{High} \}$ fra de timeframe-bars der er brugt til at lave dollarbaren.
+\item \texttt{Low} sættes til $\min\{ \texttt{Low} \}$ fra de timeframe-bars der er brugt til at lave dollarbaren.
+\item \texttt{Volume} sættes fast til \textbf{dollarbar-cap}.
+\end{itemize}
+\textbf{OBS:} Når \textbf{dollarbar-cap} er nået videreføres det resterende beløb fra den timeframe-bar til den næste dollarbar.
+
+\end{document}
