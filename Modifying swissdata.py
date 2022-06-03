@@ -20,10 +20,15 @@ from dateutil import parser
 import pytz
 from pytz import all_timezones
 from datetime import datetime, timedelta
+import operator
+import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # 2. Reading in data
-os.chdir("/Users/frederikzobbe/Documents/GitHub/Machine-Learning-in-Finance/Data")
+os.chdir("/Users/frederikzobbe/Desktop/Data")
 #os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
 
 #df = pd.read_csv('SwissData.txt', index_col=None, header = None)
@@ -126,9 +131,13 @@ IWF['Name'] = "RUSSEL GROWTH"
 IWF['Type'] = "ETF"
 
 df = pd.concat([DAX, HK, SP, NAS, DOW, UST, EURUSD, BITC, ETH, GAS, OIL, COFFE, EEM, IYR, IWD, IWF], ignore_index=True)
+IDX = pd.concat([DAX, HK, SP, NAS, DOW], ignore_index=True)
 
 df.to_csv('SwissData.txt', index = False, header=True)
-df = pd.read_csv('SwissData.txt', index_col=None, header = None)
+
+#os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
+#date_cols_tmp = ['Local time']
+#df1 = pd.read_csv('SwissData.txt', index_col=None, parse_dates=date_cols_tmp)
 
 # 3. Creating functions
 
@@ -157,30 +166,98 @@ def timefunc(x: pd.DataFrame, colint: int):
     x['Hour']   = tmp2.dt.hour
     x['Minute'] = tmp2.dt.minute
 
+    # tmp column
+    #x['tmptime'] = x['Local time'].str[:-6]
+
     # Delete initial column
-    x.drop(x.columns[colint], axis=1, inplace = True)
+    #x.drop(x.columns[colint], axis=1, inplace = True)
 
     # Ends the timer
     endtime = time.time()
     dur = endtime - starttime
-    print(' --- The function TIMEFUNC took %s seconds to run ---' %round(dur,2))
+    print(' --- The function TIMEFUNC took %s minutes to run ---' %round(dur,2)/60)
     return x
 
-# Test
-swissdat = timefunc(df, 0)
+# 4. Applying functions to data
+indx = timefunc(IDX, 0) # xx minutes
 
-df.to_csv('SwissData2.txt', index = False, header=True)
-df = pd.read_csv('SwissData2.txt', index_col=None, header = None)
+swissdata = timefunc(df, 0) # 78 minutes
+IDX.to_csv('IndexData.txt', index = False, header=True)
+
+# 5. Reading in the data
+os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
+
+def reading(nrows, nskips = 0):
+    starttime = time.time()
+    df_iter = pd.read_csv('SwissData2.txt', index_col=None, parse_dates=date_cols_tmp, skiprows = nskips, chunksize=nrows)
+    df = df_iter.get_chunk()
+    
+    endtime = time.time()
+    dur = endtime - starttime
+    print(' --- The function READING took %s minutes to run ---' %round(dur,2)/60)
+    return df
+
+#DAX: skiprows=0, nrows = 1394003
+def reading(nrows, nskips):
+    starttime = time.time()
+    date_cols_tmp = ['Local time', 'CET', 'tmptime']
+    df_iter = pd.read_csv('SwissData2.txt', index_col=None, parse_dates=date_cols_tmp, skiprows = nskips, chunksize=nrows)
+    df = df_iter.get_chunk()
+    
+    endtime = time.time()
+    dur = endtime - starttime
+    print(' --- The function READING took %s minutes to run ---' %round(dur,2)/60)
+    return df
+
+df = reading(4000000, 0)
+df['Type'].value_counts()
+
+
+
+df[df['Name'] == 'DAX'].tail(5)
+
+starttime = time.time()
+length = 500000
+df_iter = pd.read_csv('SwissData2.txt', index_col=None, parse_dates=date_cols_tmp, chunksize=length)
+df = df_iter.get_chunk()
+len(df)
+df['Name'].nunique()
+endtime = time.time()
+
+
+for iter_num, chunk in enumerate(df_iter, 1):
+    print(f'Processing iteration {iter_num}')
+    # do things with chunk
+
+
+df = pd.read_csv('SwissData2.txt', sep=',', index_col=None, parse_dates=date_cols_tmp, chunksize=1000) #skiprows=1000)
+
+
+# 5. Test of results
+ticker = 'DAX'
+df_sub = swissdata[(swissdata['Name'] == ticker) & (swissdata['Year'] < 2019) & (swissdata['Month'] < 3)]
+df_sub.head(5)
+len(df_sub)
+
+x = df_sub['Local time']
+y = df_sub['Close']
+z = df_sub['CET']
+
+plt.subplot(1,2,1)
+plt.plot(x,y,'r')
+plt.subplot(1,2,2)
+plt.plot(z,y,'b')
+plt.show()
+
+import plotly.express as px
+fig = px.line(df_sub, x="CET", y="Close", color='Name')
+fig.show()
 
 
 
 
 
-
-
-
-
-
+################## DEVELOPMENT ##############
 # Dictionary of opening times
 
 Dict = {'DAX': [9,], 1: [1, 2, 3, 4]}
