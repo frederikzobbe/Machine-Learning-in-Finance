@@ -15,6 +15,7 @@ import os as os
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from datetime import datetime
+import seaborn as sns
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -22,18 +23,30 @@ pd.options.mode.chained_assignment = None  # default='warn'
 #os.chdir("/Users/frederikzobbe/Documents/GitHub/Machine-Learning-in-Finance/Data")
 #os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
 
-date_cols = ['CPHTime']
 #dtypes = [float, float, float, float, float, str, str, datetime, int, int, int, int, int]
-df = pd.read_csv('SwissData2.txt', index_col=None, parse_dates=date_cols)
+date_cols = ['Local time, tmptime, CET']
+cryptodata = pd.read_csv('CryptoData.txt', index_col=None, parse_dates=date_cols)
+indexdata = pd.read_csv('IndexData.txt', index_col=None, parse_dates=date_cols)
+commodata = pd.read_csv('CommoData.txt', index_col=None, parse_dates=date_cols)
+
+#df.sort_values(by=['Name', 'Year', 'Month', 'Day', 'Hour', 'Minute'], inplace = True, ascending = (1, 1, 1, 1, 1, 1))
 
 # 3. Plotting the data
-df_sub = df[df['Name'] == 'DAX']
-df_sub.set_index('CPHTime', inplace=True)
-plotdata = df_sub["Open"].copy()
+
+# old
+df_sub = DAX[:100000]
+df_sub.set_index('Local time', inplace=True)
+plotdata = df_sub["Close"].copy()
 
 plotdata.plot(figsize=(30,7), fontsize = 12)
 plt.style.use("seaborn")
 plt.show()
 
-plotdata.plot(legend=True,figsize=(12,5))
+# new
+df_sub = DAX2[:100000]
+df_sub.set_index('Local time', inplace=True)
+plotdata = df_sub["Close"].copy()
+
+plotdata.plot(figsize=(30,7), fontsize = 12)
+plt.style.use("seaborn")
 plt.show()
