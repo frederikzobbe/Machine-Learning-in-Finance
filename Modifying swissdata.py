@@ -60,9 +60,9 @@ NAS['Type'] = "Index"
 
 df1 = pd.read_csv('GBR.IDXGBP_Candlestick_1_M_BID_01.01.2018-31.12.2020.csv')
 df2 = pd.read_csv('GBR.IDXGBP_Candlestick_1_M_BID_01.01.2021-30.04.2022.csv')
-DOW = pd.concat([df1, df2])
-DOW['Name'] = "DOWJONES"
-DOW['Type'] = "Index"
+FTSE = pd.concat([df1, df2])
+FTSE['Name'] = "FTSE"
+FTSE['Type'] = "Index"
 
 df1 = pd.read_csv('USTBOND.TRUSD_Candlestick_1_M_BID_18.12.2018-31.12.2020.csv')
 df2 = pd.read_csv('USTBOND.TRUSD_Candlestick_1_M_BID_01.01.2021-30.04.2022.csv')
@@ -130,8 +130,8 @@ IWF = pd.concat([df1, df2])
 IWF['Name'] = "RUSSEL GROWTH"
 IWF['Type'] = "ETF"
 
-df = pd.concat([DAX, HK, SP, NAS, DOW, UST, EURUSD, BITC, ETH, GAS, OIL, COFFE, EEM, IYR, IWD, IWF], ignore_index=True)
-IDX = pd.concat([DAX, HK, SP, NAS, DOW], ignore_index=True)
+df = pd.concat([DAX, HK, SP, NAS, FTSE, UST, EURUSD, BITC, ETH, GAS, OIL, COFFE, EEM, IYR, IWD, IWF], ignore_index=True)
+CRYPTO = pd.concat([BITC, ETH], ignore_index=True)
 
 df.to_csv('SwissData.txt', index = False, header=True)
 
@@ -141,48 +141,67 @@ df.to_csv('SwissData.txt', index = False, header=True)
 
 # 3. Creating functions
 
-# FUNCTION: Converts column 'Local time' to actual time (Copenhagen)
-def rowtime(row):
-    tmp = parser.parse(row['Local time'])
-    localtime = tmp.astimezone (pytz.timezone('Europe/Copenhagen'))
-    finaltime = pd.to_datetime(localtime.strftime ("%Y-%m-%d %H:%M:%S")) - timedelta(hours=2)
-    return finaltime
-
 # FUNCTION: Adds time and date columns to data
 def timefunc(x: pd.DataFrame, colint: int):
     
     # Sets a timer
     starttime = time.time()
-    
-    # Converts column to datetime
-    tmp  = x.apply(lambda row: rowtime(row), axis=1)
-    tmp2 = pd.to_datetime(tmp)
-
-    # Constructs new columns
-    x['CET'] = tmp2
-    x['Year']   = tmp2.dt.year
-    x['Month']  = tmp2.dt.month
-    x['Day']    = tmp2.dt.day
-    x['Hour']   = tmp2.dt.hour
-    x['Minute'] = tmp2.dt.minute
 
     # tmp column
-    #x['tmptime'] = x['Local time'].str[:-6]
+    x['tmptime'] = x['Local time'].str[:-13]
+    
+    # Converts column to datetime
+    tmp  = pd.to_datetime(x['tmptime'], format= "%d.%m.%Y %H:%M:%S")
+
+    # Constructs new columns
+    x['CET'] = tmp
+    x['Year']   = tmp.dt.year
+    x['Month']  = tmp.dt.month
+    x['Day']    = tmp.dt.day
+    x['Hour']   = tmp.dt.hour
+    x['Minute'] = tmp.dt.minute
 
     # Delete initial column
-    #x.drop(x.columns[colint], axis=1, inplace = True)
+    x.drop(x.columns[colint], axis=1, inplace = True)
+    x.drop("tmptime", axis=1, inplace=True)
 
     # Ends the timer
     endtime = time.time()
     dur = endtime - starttime
-    print(' --- The function TIMEFUNC took %s minutes to run ---' %round(dur,2)/60)
+    print(' --- The function TIMEFUNC took %s seconds to run ---' %round(dur,2))
     return x
 
 # 4. Applying functions to data
-indx = timefunc(IDX, 0) # xx minutes
+df1 = pd.read_csv('DEU.IDXEUR_Candlestick_1_Hour_BID_01.01.2018-30.04.2022.csv')
+DAX = df1
+DAX['Name'] = "DAX"
+DAX['Type'] = "Index"
+df2 = pd.read_csv('USA500.IDXUSD_Candlestick_1_Hour_BID_01.01.2018-30.04.2022.csv')
+SP = df2
+SP['Name'] = "S&P"
+SP['Type'] = "Index"
+df3 = pd.read_csv('USATECH.IDXUSD_Candlestick_1_Hour_BID_01.01.2018-30.04.2022.csv')
+NAS = df3
+NAS['Name'] = "NASDAQ"
+NAS['Type'] = "Index"
+df4 = pd.read_csv('HKG.IDXHKD_Candlestick_1_Hour_BID_01.01.2018-30.04.2022.csv')
+HK = df4
+HK['Name'] = "HK"
+HK['Type'] = "Index"
+df5 = pd.read_csv('GBR.IDXGBP_Candlestick_1_Hour_BID_01.01.2018-30.04.2022.csv')
+FTSE = df4
+FTSE['Name'] = "FTSE"
+FTSE['Type'] = "Index"
 
-swissdata = timefunc(df, 0) # 78 minutes
-IDX.to_csv('IndexData.txt', index = False, header=True)
+df = pd.concat([DAX, HK, SP, NAS, FTSE], ignore_index=True)
+data = timefunc(df, 0)
+
+data.to_csv('IndexDataHour.txt', index = False, header=True)
+
+# 4.5
+os.chdir("/Users/frederikzobbe/Desktop/Data")
+data = timefunc(df, 0)
+
 
 # 5. Reading in the data
 os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
