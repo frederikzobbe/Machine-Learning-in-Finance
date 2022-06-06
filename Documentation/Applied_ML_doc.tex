@@ -1,8 +1,7 @@
+% !TeX document-id = {63710f20-6e3d-45d7-967a-a5f1c00da9ec}
 \documentclass[a4paper,danish,12pt]{article}
 
 \usepackage{hyperref}
-\usepackage{minted} % For code snippets see https://www.overleaf.com/learn/latex/Code_Highlighting_with_minted
-
 \usepackage[utf8]{inputenc}
 \usepackage[danish]{babel}
 \usepackage[T1]{fontenc}
@@ -271,8 +270,6 @@
 
 \graphicspath{{Billeder/}}
 
-\usemintedstyle{friendly} 
-
 %\input{reference solutions/Latex_Useful_Symbols_and_Macros}
 %\usepackage{graphicx}  % For including images
 %\usepackage{cleveref}  % For references see https://texblog.org/2013/05/06/cleveref-a-clever-way-to-reference-in-latex/
@@ -331,6 +328,17 @@ Vi indsamler historisk minut-data fra \href{https://www.dukascopy.com/swiss/engl
 
 \subsection*{Forbrugerprisindex (Troels' opfordring)}
 
+Vi har lavet et datasæt for forbrugerprisindekset og alle de under kategorier, som anvendes til at bestemme det. Vi har omdannet \texttt{Time} til \texttt{Year} og \texttt{Month}, så vi kan matche med datoerne i de ovenstående investerings muligheder. Data kan findes i mappen:
+\begin{align*}
+	\texttt{Google\_Drev\_data/Anden data}
+\end{align*}
+
+\subsection*{Storebælts trafik}
+
+Vi har lavet et datasæt for Storebælts trafik, altså hvor mange og hvilke type biler, som kører over Storebælt. Vi har omdannet \texttt{Time} til \texttt{Year} og \texttt{Month}, så vi kan matche med datoerne i de ovenstående investerings muligheder. Data kan findes i mappen:
+\begin{align*}
+\texttt{Google\_Drev\_data/Anden data}
+\end{align*}
 
 \subsection*{Kaggle competition (Japansk markedsdata)}
 
@@ -339,21 +347,24 @@ Vi indsamler historisk minut-data fra \href{https://www.dukascopy.com/swiss/engl
 
 \subsection*{Index'er}
 Fra dataudtrækket fås følgende kolonner:
-\begin{equation*} 
-\texttt{Local\_time}
+\begin{align*} 
+\texttt{CET}
+\quad \texttt{Hour}
+\quad \texttt{Day}
+\quad \texttt{Month}
+\quad \texttt{Year}
 \quad \texttt{Open}
 \quad \texttt{High}
 \quad \texttt{Low}
 \quad \texttt{Close}
 \quad \texttt{Volume}
-\end{equation*}
-
+\end{align*}
 Vi ønsker for ting handlet på børser (index, enkeltaktier, ETF'er) at flage åbningstider og omskrive data til dollar-bars.\\
 \\
 For at flage åbningstider laves en ny kolonne, som markerer hvorvidt dette tidsrum er inden børsen åbner (pre-market), efter børsen er lukket (after-market) eller i børsens normale åbningsvindue.
 \\\\
 \textbf{Omskrivning af timeframe-data til dollarbar-data:} \\
-For at omskrive til dollarbars oprettes en ny kolonne \texttt{Mean\_HL} som er den (estimerede) gennemsnitlige handelspris i tidrummet (minuttet):
+For at omskrive til dollarbars oprettes en ny kolonne \texttt{Mean\_HL} som er den (estimerede) gennemsnitlige handelspris i tidrummet (minuttet/timen):
 \begin{equation*}
 \texttt{Mean\_HL} = \frac{\texttt{High}+\texttt{Low}}{2}
 \end{equation*} 
@@ -361,7 +372,7 @@ Der laves en ny kolonne \texttt{Mean\_OC}, som er gennemsnittet mellem \texttt{O
 \begin{equation*}
 \texttt{Mean\_OC} = \frac{\texttt{Open}+\texttt{Close}}{2}
 \end{equation*} 
-Derefter laves en ny kolonne \texttt{Total\_transaction}, som angiver det beløb der er handlet for i det givne tidsrum (minut):
+Derefter laves en ny kolonne \texttt{Total\_transaction}, som angiver det beløb der er handlet for i det givne tidsrum (minut/time):
 \begin{equation*}
 \texttt{Total\_transaction} = \texttt{Volume} \cdot \texttt{Mean\_HL}
 \end{equation*}
@@ -369,13 +380,40 @@ Der skal nu bestemmes et \textbf{dollarbar-cap}, som skal være det beløb en en
 \\
 Der laves nu en ny række for hver gang den aggregerede \texttt{Total\_transaction} når det givne \textbf{dollarbar-cap}, og værdierne (\texttt{Local time}, \texttt{Open}, \texttt{High}, \texttt{Low}, \texttt{Close} og \texttt{Volume} = \textbf{dollarbar-cap}) indsættes som den nye dollarbar-række:
 \begin{itemize}
-\item \texttt{Local time} sættes til \texttt{Local time} for den række hvor \textbf{dollarbar-cap} nås (altså den sidste række):
+\item Alle tids variabler sættes til værdien for den række hvor \textbf{dollarbar-cap} nås (altså den sidste række):
 \item \texttt{Open} er for den første dollarbar \texttt{Open} fra den første timeframe-bar, og for de resterende \texttt{Mean\_OC} fra den timeframe-bar hvor seneste \textbf{dollarbar-cap} blev nået.
 \item \texttt{Close} sættes til \texttt{Mean\_OC} fra den timeframe-bar hvor \textbf{dollarbar-cap} nås.
 \item \texttt{High} sættes til $\max\{ \texttt{High} \}$ fra de timeframe-bars der er brugt til at lave dollarbaren.
 \item \texttt{Low} sættes til $\min\{ \texttt{Low} \}$ fra de timeframe-bars der er brugt til at lave dollarbaren.
-\item \texttt{Volume} sættes fast til \textbf{dollarbar-cap}.
+\item \texttt{Volume} bliver sat til summen over de observationer som bliver brugt til at lave dollarbaren. Dog tager vi kun den andel af den sidste observations \texttt{Volume} som ligger inden for \texttt{Dollarbar\_cap}. Givet $n$ er antallet af observation, som bliver brugt til at danne vores dollarbar, så vil \texttt{Volume} blive udregnet på følgende måde
+\begin{align*}
+	p &= \frac{\texttt{Dollarbar\_cap} - \sum_{i=1}^{n-1}\left(\texttt{Volume}_i\right) + \texttt{Mean\_HL}_n\cdot\texttt{Volume}_n}{\texttt{Mean\_HL}_n\cdot\texttt{Volume}_n}\\
+	\texttt{Volume\_dollarbar}&=\sum_{i=1}^{n-1}\left(\texttt{Volume}_i\right)+p\cdot\texttt{Volume}_n
+\end{align*}
+hvor $(1-p)\cdot\texttt{Volume}_n$ kommer med i den næste dollarbar.
+\item \texttt{Monetary\_Volume} sættes fast til \textbf{dollarbar-cap}.
+\item \texttt{Period} er tiden der er gået for at lave dollarbaren. Så hvis observation '10/02-2020 10.00', '10/02-2020 11.00', '10/02-2020 12.00', så er perioden 3 timer. Det er ikke helt korrekt, men det er bare for at lave en tidsfornemmelse over dollarbaren.
 \end{itemize}
 \textbf{OBS:} Når \textbf{dollarbar-cap} er nået videreføres det resterende beløb fra den timeframe-bar til den næste dollarbar.
+
+\subsection*{Flere covariater}
+
+Udfra price-dataet eller dollarbar-dataet danner vi nye covariater. 
+\begin{itemize}
+	\item \textbf{Change of rate}, \texttt{ROC\_x}, som er procent ændringen af lukningsprisen fra x antal minutter/timer/dage. Det regnes på følgende måde
+	\begin{align*}
+		\frac{\texttt{Close}_{today}-\texttt{Close}_{x\_old}}{\texttt{Close}_{x\_old}} \cdot 100.
+	\end{align*}
+	Vi gør det for 5/10/15/20 minutter/timer
+	\item \textbf{Exponential moving average}, \texttt{EMA\_x}, som er en type 'moving average', som vægter nuværende data points højere end ældre. Her svare $x$ til dage.
+	\begin{align*}
+		k = \frac{\text{smoothing}}{\text{days} + 1}
+		\texttt{Close}_{today}\cdot k + \texttt{EMA}_{yesterday}\cdot(1-k)
+	\end{align*}
+	Vi gør det for 10/50/200 minutter/timer.
+\end{itemize}
+\textbf{Price/Earning}:\\
+Vi tilføjer også månedlig P/E for vores indeks. Dataen har vi fundet lidt forskellige steder henne, men vi har sat datasættet op således, at vi har \texttt{Year} og \texttt{Month}, som vores tidsfaktorer og så også \texttt{Name}, så vi nemt kan merge P/E på vores indeks data.
+
 
 \end{document}
