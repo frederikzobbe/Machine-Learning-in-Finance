@@ -44,18 +44,19 @@ dataframe = pd.DataFrame(dataframe_full['Close']) # loaded from 'Reading in data
 dataset = dataframe.values
 dataset = dataset.astype('float32')
 
-# Normalize the dataset
-scaler = MinMaxScaler(feature_range=(0, 1))
-dataset = scaler.fit_transform(dataset)
-
 # Split into train and test sets
 perctest = 0.7
 train_size = int(len(dataset) * perctest)
 test_size = len(dataset) - train_size
 train, test = dataset[0:train_size,:], dataset[train_size:len(dataset),:]
 
+# Normalize the dataset (*after splitting)
+scaler = MinMaxScaler(feature_range=(0, 1))
+train  = scaler.fit_transform(train)
+test   = scaler.transform(test)
+
 # Reshape into X = t and Y = t + 1
-look_back = 5
+look_back = 20
 trainX, trainY = create_dataset(train, look_back)
 testX, testY   = create_dataset(test, look_back)
 
@@ -83,7 +84,7 @@ class Net(nn.Module):
 net = Net()
 
 opt = torch.optim.Adam(net.parameters(), lr=0.005)
-progress_bar = tqdm(range(2000))
+progress_bar = tqdm(range(1000))
 for epoch in progress_bar:
     prediction = net(trainX)
     loss = torch.sum((prediction.flatten() - trainY.flatten())**2)
@@ -92,16 +93,28 @@ for epoch in progress_bar:
     opt.step()
     opt.zero_grad()
 
-# make predictions
+# make predictions 
 with torch.no_grad():
     trainPredict = net(trainX).numpy()
     testPredict = net(testX).numpy()
+
+# make predictions (recursively)
+with torch.no_grad():
+    pred_recursive_test = trainX[-1,:,:].numpy()
+    for i in np.arange(testX.shape[0]):
+        pred_recursive_test = np.reshape(pred_recursive_test, (1, look_back+i, 1))
+        input = pred_recursive_test[:,-look_back:,:]
+        input_torch = torch.tensor(input, dtype=torch.float)
+        tmp_out = net(input_torch).numpy()
+        pred_recursive_test     = np.append(pred_recursive_test, tmp_out)
 
 # invert predictions
 trainPredict = scaler.inverse_transform(trainPredict)
 trainY_inv = scaler.inverse_transform([trainY.numpy()])
 testPredict = scaler.inverse_transform(testPredict)
 testY_inv = scaler.inverse_transform([testY.numpy()])
+
+pred_recursive_test_inv    = scaler.inverse_transform([pred_recursive_test[look_back:]])
 
 # calculate root mean squared error
 trainScore = math.sqrt(mean_squared_error(trainY_inv[0], trainPredict[:,0]))
@@ -117,17 +130,20 @@ trainPredictPlot[look_back:len(trainPredict)+look_back, :] = trainPredict
 # shift test predictions for plotting
 testPredictPlot = np.empty_like(dataset)
 testPredictPlot[:, :] = np.nan
-testPredictPlot[len(trainPredict)+(look_back*2)+1:len(dataset)-1, :] = testPredict
+#testPredictPlot[len(trainPredict)+(look_back*2)+1:len(dataset)-1, :] = testPredict
+
+testPredictPlot[len(trainPredict)-1:len(dataset)-3-look_back, :] = np.transpose(pred_recursive_test_inv)
 
 # plot baseline and predictions
-splitpoint = int((perctest * len(dataset)))
+splitpoint = int((perctest * len(dataset)))-3
 splitdate = dataframe_full[dataframe_full.index == splitpoint]['CET'].dt.date.item().strftime('%d %b %Y')
 
 #xi = list(range(len(dataset)))
 #xdates = dataframe_full[dataframe_full.index == xi]['CET'].dt.date
 
+# Long period
 fig, ax = plt.subplots(figsize=(8, 5), dpi=120)
-plt.plot(scaler.inverse_transform(dataset), label='Observations')
+plt.plot(dataset, label='Observations')
 plt.plot(trainPredictPlot, label='Predict: Train')
 plt.plot(testPredictPlot, label='Predict: Test')
 ax.legend(loc='upper left', frameon=False)
@@ -137,4 +153,16 @@ plt.axvline(x = splitpoint, color = 'r', linestyle = '-')
 plt.text(splitpoint+200,8000, str(splitdate),rotation=0)
 plt.show()
 
-int((perctest * len(dataset)))
+# Short period (After traindata ends)
+fig, ax = plt.subplots(figsize=(8, 5), dpi=120)
+plt.plot(dataset, label='Observations', color = 'b')
+#plt.plot(trainPredictPlot, label='Predict: Train')
+plt.plot(testPredictPlot, label='Predict: Test', color = 'r')
+ax.legend(loc='upper left', frameon=False)
+plt.title('DAX index predictions')
+#plt.xticks(xi, xdates)
+plt.axvline(x = splitpoint, color = 'r', linestyle = '-')
+plt.text(splitpoint+200,8000, str(splitdate),rotation=0)
+plt.xlim([splitpoint-20, splitpoint+50])
+plt.ylim([12000, 15000])
+plt.show()
