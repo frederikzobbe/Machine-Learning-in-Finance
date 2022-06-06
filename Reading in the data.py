@@ -21,32 +21,43 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 # 2. Reading in data
 #os.chdir("/Users/frederikzobbe/Documents/GitHub/Machine-Learning-in-Finance/Data")
-#os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
-
-#dtypes = [float, float, float, float, float, str, str, datetime, int, int, int, int, int]
-date_cols = ['Local time, tmptime, CET']
-cryptodata = pd.read_csv('CryptoData.txt', index_col=None, parse_dates=date_cols)
-indexdata = pd.read_csv('IndexData.txt', index_col=None, parse_dates=date_cols)
-commodata = pd.read_csv('CommoData.txt', index_col=None, parse_dates=date_cols)
+os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
+date_cols = ['CET']
+daxdatah = pd.read_csv('DaxDataHour.txt', index_col=None, parse_dates=date_cols, engine='python')
 
 #df.sort_values(by=['Name', 'Year', 'Month', 'Day', 'Hour', 'Minute'], inplace = True, ascending = (1, 1, 1, 1, 1, 1))
 
-# 3. Plotting the data
 
-# old
-df_sub = DAX[:100000]
-df_sub.set_index('Local time', inplace=True)
-plotdata = df_sub["Close"].copy()
 
-plotdata.plot(figsize=(30,7), fontsize = 12)
-plt.style.use("seaborn")
-plt.show()
 
-# new
-df_sub = DAX2[:100000]
-df_sub.set_index('Local time', inplace=True)
-plotdata = df_sub["Close"].copy()
 
-plotdata.plot(figsize=(30,7), fontsize = 12)
-plt.style.use("seaborn")
+
+
+
+# Test from net https://stackoverflow.com/questions/67319653/index-x-axis-as-datetime64ns-not-working
+df4 = pd.read_csv('https://pastebin.pl/view/raw/1046cfca',parse_dates=['Open time']) 
+df4.set_index('Open time', inplace=True)
+
+fig, (ax2) = plt.subplots(1, 1, figsize=(15, 7))
+
+df4['Close'].plot(ax=ax2, color = 'k', lw = 1, label = 'Close Price')
+df4['4_EMA'].plot(ax=ax2, color = 'b', lw = 1, label = '4_EMA')
+#df4['20_EMA'].plot(ax=ax2, color = 'g', lw = 1, label = '20_EMA')
+        
+ax2.set_title("4H time frame")
+
+# ----------------------------------------------------------------------
+# the following is changed to use `df.plot`:
+# ----------------------------------------------------------------------
+
+# plot 'buy' signals
+df4.loc[df4['Position']==1, '4_EMA'].plot(
+    ls='None', marker='^', markersize = 15,
+    color = 'g', alpha = 0.7, label = 'buy', ax=ax2)
+
+# plot 'sell' signals
+df4.loc[df4['Position']==-1, '4_EMA'].plot(
+    ls='None', marker='v', markersize = 15,
+    color = 'r', alpha = 0.7, label = 'sell', ax=ax2)
+
 plt.show()
