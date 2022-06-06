@@ -33,14 +33,14 @@ np.random.seed(42)
 def create_dataset(dataset, look_back=1):
     dataX, dataY = [], []
     for i in range(len(dataset)-look_back-1):
-        a = dataset[i:(i+look_back), 0]
+        a = dataset[i:(i+look_back), 0:2]  # NUMBER OF FEATURES
         dataX.append(a)
         dataY.append(dataset[i + look_back, 0])
     return np.array(dataX), np.array(dataY)
 
 # Load the dataset:
 dataframe_full = pd.DataFrame(daxdatah) # loaded from 'Reading in data'
-dataframe = pd.DataFrame(dataframe_full['Close']) # loaded from 'Reading in data'
+dataframe = pd.DataFrame(dataframe_full[['Close','Volume']]) # loaded from 'Reading in data'
 dataset = dataframe.values
 dataset = dataset.astype('float32')
 
@@ -50,6 +50,7 @@ train_size = int(len(dataset) * perctest)
 test_size = len(dataset) - train_size
 train, test = dataset[0:train_size,:], dataset[train_size:len(dataset),:]
 
+# MISSING: Should scale inputs (features) and outputs (prices) separately
 # Normalize the dataset (*after splitting)
 scaler = MinMaxScaler(feature_range=(0, 1))
 train  = scaler.fit_transform(train)
@@ -61,8 +62,8 @@ trainX, trainY = create_dataset(train, look_back)
 testX, testY   = create_dataset(test, look_back)
 
 # Reshape input to be [samples, time steps, features]
-trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
-testX = np.reshape(testX, (testX.shape[0], testX.shape[1], 1))
+trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 2))  # NUMBER OF FEATURES
+testX = np.reshape(testX, (testX.shape[0], testX.shape[1], 2))  # NUMBER OF FEATURES
 
 trainX = torch.tensor(trainX, dtype=torch.float)
 trainY = torch.tensor(trainY, dtype=torch.float)
@@ -72,7 +73,7 @@ testY = torch.tensor(testY, dtype=torch.float)
 class Net(nn.Module):
     def __init__(self, hidden_size=7):
         super().__init__()
-        self.lstm = nn.LSTM(input_size=1, hidden_size=hidden_size, batch_first=True)
+        self.lstm = nn.LSTM(input_size=2, hidden_size=hidden_size, batch_first=True)  # NUMBER OF FEATURES
         self.linear = nn.Linear(hidden_size, 1)
         
     def forward(self, x):
@@ -84,7 +85,7 @@ class Net(nn.Module):
 net = Net()
 
 opt = torch.optim.Adam(net.parameters(), lr=0.005)
-progress_bar = tqdm(range(1000))
+progress_bar = tqdm(range(100))
 for epoch in progress_bar:
     prediction = net(trainX)
     loss = torch.sum((prediction.flatten() - trainY.flatten())**2)
@@ -114,7 +115,7 @@ trainY_inv = scaler.inverse_transform([trainY.numpy()])
 testPredict = scaler.inverse_transform(testPredict)
 testY_inv = scaler.inverse_transform([testY.numpy()])
 
-pred_recursive_test_inv    = scaler.inverse_transform([pred_recursive_test[look_back:]])
+pred_recursive_test_inv    = scaler.inverse_transform([pred_recursive_test[look_back-1:]])
 
 # calculate root mean squared error
 trainScore = math.sqrt(mean_squared_error(trainY_inv[0], trainPredict[:,0]))
@@ -132,7 +133,7 @@ testPredictPlot = np.empty_like(dataset)
 testPredictPlot[:, :] = np.nan
 #testPredictPlot[len(trainPredict)+(look_back*2)+1:len(dataset)-1, :] = testPredict
 
-testPredictPlot[len(trainPredict)-1:len(dataset)-3-look_back, :] = np.transpose(pred_recursive_test_inv)
+testPredictPlot[len(trainPredict)-2+look_back:len(dataset)-3-look_back, :] = np.transpose(pred_recursive_test_inv)
 
 # plot baseline and predictions
 splitpoint = int((perctest * len(dataset)))-3
