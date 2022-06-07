@@ -23,13 +23,23 @@ pd.options.mode.chained_assignment = None  # default='warn'
 #os.chdir("/Users/frederikzobbe/Documents/GitHub/Machine-Learning-in-Finance/Data")
 os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
 #os.chdir("/Users/mathiasfrederiksen/Desktop/Forsikringsmatematik/5. år/Applied Machine Learning/Data/SwissData")
-#os.chdir("C:\Users\mikki\Desktop\AppML\New env Personal projects\Final project\data\SwissData")
+os.chdir("/Users/mikki/Desktop/AppML/New env Personal projects/Final project/data/SwissData")
 
 date_cols = ['CET']
 idxdatah = pd.read_csv('IndexDataHour_v3.txt', index_col=None, parse_dates=date_cols, engine='python')
 
 #df.sort_values(by=['Name', 'Year', 'Month', 'Day', 'Hour', 'Minute'], inplace = True, ascending = (1, 1, 1, 1, 1, 1))
 
+## ------------------------- DaxData -----------------------------------------
+daxdata = pd.read_csv('DaxData.txt', index_col=None, parse_dates=['CET'], engine='python')
+# Needs fixing. TmpTime still present (07/06)
+
+## ------------------------ CryptoData ---------------------------------------
+# Needs fixing. TmpTime still present (07/06)
+cryptodata = pd.read_csv('CryptoData.txt', index_col=None, parse_dates=['CET'], engine='python')
+
+## ------------------------ IndexData ----------------------------------------
+indexdataHour = pd.read_csv("IndexDataHour.txt", index_col=None, parse_dates=['CET'], engine='python')
 
 
 
