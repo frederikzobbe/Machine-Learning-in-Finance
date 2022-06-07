@@ -26,7 +26,7 @@ os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applie
 #os.chdir("C:\Users\mikki\Desktop\AppML\New env Personal projects\Final project\data\SwissData")
 
 date_cols = ['CET']
-daxdatah = pd.read_csv('DaxDataHour.txt', index_col=None, parse_dates=date_cols, engine='python')
+idxdatah = pd.read_csv('IndexDataHour_v3.txt', index_col=None, parse_dates=date_cols, engine='python')
 
 #df.sort_values(by=['Name', 'Year', 'Month', 'Day', 'Hour', 'Minute'], inplace = True, ascending = (1, 1, 1, 1, 1, 1))
 
