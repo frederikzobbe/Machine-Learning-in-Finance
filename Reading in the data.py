@@ -23,6 +23,8 @@ pd.options.mode.chained_assignment = None  # default='warn'
 #os.chdir("/Users/frederikzobbe/Documents/GitHub/Machine-Learning-in-Finance/Data")
 os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
 #os.chdir("/Users/mathiasfrederiksen/Desktop/Forsikringsmatematik/5. år/Applied Machine Learning/Data/SwissData")
+#os.chdir("C:\Users\mikki\Desktop\AppML\New env Personal projects\Final project\data\SwissData")
+
 date_cols = ['CET']
 daxdatah = pd.read_csv('DaxDataHour.txt', index_col=None, parse_dates=date_cols, engine='python')
 
