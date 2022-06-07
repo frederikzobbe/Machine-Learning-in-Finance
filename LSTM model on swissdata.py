@@ -29,9 +29,10 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Fix random seed for reproducibility:
 np.random.seed(42)
-
+idxdatah.columns
 # Used features
-features_used = ['Close', 'Volume']
+features_used = ['Close', 'Volume', 'Hour', 'ROC-5', 'ROC-20',
+       'EMA-10', 'EMA-200', 'Moterbike and car <3m', 'Car 3-6m', 'Total', '00 CPI Total', '01.1 Food']
 
 # Convert an array of values into a dataset matrix:
 def create_dataset(dataset, look_back=1):
@@ -43,7 +44,7 @@ def create_dataset(dataset, look_back=1):
     return np.array(dataX), np.array(dataY)
 
 # Load the dataset:
-dataframe_full = pd.DataFrame(daxdatah) # loaded from 'Reading in data'
+dataframe_full = pd.DataFrame(idxdatah[idxdatah['Name']== 'DAX']) # loaded from 'Reading in data'
 dataframe = pd.DataFrame(dataframe_full[features_used]) # loaded from 'Reading in data'
 dataset = dataframe.values
 dataset = dataset.astype('float32')
@@ -68,7 +69,7 @@ train = np.column_stack((train_price_scaled, train_feat_scaled))
 test = np.column_stack((test_price_scaled, test_feat_scaled))
 
 # Reshape into X = t and Y = t + 1
-look_back = 20
+look_back = 50
 trainX, trainY = create_dataset(train, look_back)
 testX, testY   = create_dataset(test, look_back)
 
@@ -153,7 +154,7 @@ for i in np.arange(len(features_used)-1):
         tmp_out = gbm.predict(input, num_iteration=gbm.best_iteration).reshape(1,-1)
         pred_recursive_test = np.concatenate((pred_recursive_test, tmp_out), axis = 0)
 
-    pred_feat = pd.concat([pred_feat, pd.DataFrame(pred_recursive_test[look_back:])])
+    pred_feat = pd.concat([pred_feat, pd.DataFrame(pred_recursive_test[look_back:])], axis = 1)
     print('Feature %s is done' %(i+1))
 
 # Prices
@@ -163,10 +164,10 @@ with torch.no_grad():
         pred_recursive_test = np.reshape(pred_recursive_test, (1, look_back+i, len(features_used)))
         input = pred_recursive_test[:, -look_back:, :]
         input_torch = torch.tensor(input, dtype=torch.float)
-        next_price = net(input_torch).numpy()
-        next_feat = 
-        tmp_out = np.array((next_price, next_feat)).reshape(1, -1)
-        pred_recursive_test     = np.concatenate((pred_recursive_test, tmp_out), axis = 0)
+        next_price = net(input_torch).numpy().reshape(1,-1)
+        next_feat = pred_feat.iloc[i,:].values.reshape(1,-1)
+        tmp_out = np.concatenate((next_price, next_feat), axis = 1)
+        pred_recursive_test = np.concatenate((pred_recursive_test.reshape(look_back+i,len(features_used)), tmp_out), axis = 0)
 
 # invert predictions
 trainPredict = scaler_out.inverse_transform(trainPredict)
@@ -174,7 +175,7 @@ trainY_inv = scaler_out.inverse_transform([trainY.numpy()])
 testPredict = scaler_out.inverse_transform(testPredict)
 testY_inv = scaler_out.inverse_transform([testY.numpy()])
 
-pred_recursive_test_inv    = scaler.inverse_transform([pred_recursive_test[look_back-1:]])
+pred_recursive_test_inv    = scaler_out.inverse_transform(pred_recursive_test[look_back-1:,:1])
 
 # calculate root mean squared error
 trainScore = math.sqrt(mean_squared_error(trainY_inv[0], trainPredict[:,0]))
@@ -190,9 +191,9 @@ trainPredictPlot[look_back:len(trainPredict)+look_back, :] = trainPredict
 # shift test predictions for plotting
 testPredictPlot = np.empty_like(dataset[:, :1])
 testPredictPlot[:, :] = np.nan
-testPredictPlot[len(trainPredict)+(look_back*2)+1:len(dataset)-1, :] = testPredict
+#testPredictPlot[len(trainPredict)+(look_back*2)+1:len(dataset)-1, :] = testPredict
 
-testPredictPlot[len(trainPredict)-2+look_back:len(dataset)-3-look_back, :] = np.transpose(pred_recursive_test_inv)
+testPredictPlot[len(trainPredict)-2+look_back:len(dataset)-3-look_back, :] = pred_recursive_test_inv
 
 # plot baseline and predictions
 splitpoint = int((perctest * len(dataset)))-3
@@ -204,7 +205,7 @@ splitdate = dataframe_full[dataframe_full.index == splitpoint]['CET'].dt.date.it
 # Long period
 fig, ax = plt.subplots(figsize=(8, 5), dpi=120)
 plt.plot(dataset[:, :1], label='Observations')
-plt.plot(trainPredictPlot, label='Predict: Train')
+#plt.plot(trainPredictPlot, label='Predict: Train')
 plt.plot(testPredictPlot, label='Predict: Test')
 ax.legend(loc='upper left', frameon=False)
 plt.title('DAX index predictions')
@@ -215,14 +216,21 @@ plt.show()
 
 # Short period (After traindata ends)
 fig, ax = plt.subplots(figsize=(8, 5), dpi=120)
-plt.plot(dataset, label='Observations', color = 'b')
+plt.plot(dataset[:, :1], label='Observations', color = 'b')
 #plt.plot(trainPredictPlot, label='Predict: Train')
 plt.plot(testPredictPlot, label='Predict: Test', color = 'r')
 ax.legend(loc='upper left', frameon=False)
 plt.title('DAX index predictions')
 #plt.xticks(xi, xdates)
 plt.axvline(x = splitpoint, color = 'r', linestyle = '-')
-plt.text(splitpoint+200,8000, str(splitdate),rotation=0)
-plt.xlim([splitpoint-20, splitpoint+50])
+#plt.text(splitpoint+200,8000, str(splitdate),rotation=0)
+plt.xlim([splitpoint-look_back, splitpoint+150])
 plt.ylim([12000, 15000])
 plt.show()
+
+
+
+# Improvement in the given index
+timeframe = 4
+dax_expected_improvement = (pred_recursive_test_inv[timeframe]-pred_recursive_test_inv[0])/pred_recursive_test_inv[0]
+
