@@ -112,6 +112,7 @@ with torch.no_grad():
 
 # make predictions (recursively)
 # Features
+pred_feat = pd.DataFrame()
 for i in np.arange(len(features_used)-1):
     # Create pandas dataframe of size (lookback+1)*length of train
     df = pd.DataFrame(columns=range(look_back+1), index=range(len(train)-look_back))
@@ -127,17 +128,33 @@ for i in np.arange(len(features_used)-1):
     input_train, input_val, truth_train, truth_val = train_test_split(X_train, y_train, test_size=0.2 ,random_state=42)
     lgb_train = lgb.Dataset(input_train, truth_train)
     lgb_eval = lgb.Dataset(input_val, truth_val, reference=lgb_train)
-    params = {'num_leaves': 100, 'learning_rate': 0.005, 'max_depth': 20}
+    params = {'num_leaves': 100, 'learning_rate': 0.005, 'max_depth': 20, "verbosity": -1}
 
     # Train the model:
     gbm = lgb.train(params,
                     lgb_train,
                     num_boost_round=2000,
                     valid_sets=lgb_eval,
-                    early_stopping_rounds=200)
+                    early_stopping_rounds=200,
+                    verbose_eval=100)
 
-    # Make predictions:
+    # Make predictions (on val):
     pred_gbm = gbm.predict(input_val, num_iteration=gbm.best_iteration)
+
+    testScore = math.sqrt(mean_squared_error(truth_val, pred_gbm))
+    print('Test Score (feature %.0f): %.2f RMSE' % (i+1, testScore))
+
+    # Make predictions (on future):
+    pred_recursive_test = trainX[-1, :, i+1].numpy().reshape(-1,1)
+
+    for k in np.arange(testX.shape[0]):
+        input = pd.DataFrame(pred_recursive_test[-look_back:].reshape(1,-1))
+        input.columns = pd.RangeIndex(start=1, stop=look_back+1, step=1)
+        tmp_out = gbm.predict(input, num_iteration=gbm.best_iteration).reshape(1,-1)
+        pred_recursive_test = np.concatenate((pred_recursive_test, tmp_out), axis = 0)
+
+    pred_feat = pd.concat([pred_feat, pd.DataFrame(pred_recursive_test[look_back:])])
+    print('Feature %s is done' %(i+1))
 
 # Prices
 with torch.no_grad():
@@ -147,7 +164,7 @@ with torch.no_grad():
         input = pred_recursive_test[:, -look_back:, :]
         input_torch = torch.tensor(input, dtype=torch.float)
         next_price = net(input_torch).numpy()
-        next_feat =
+        next_feat = 
         tmp_out = np.array((next_price, next_feat)).reshape(1, -1)
         pred_recursive_test     = np.concatenate((pred_recursive_test, tmp_out), axis = 0)
 
