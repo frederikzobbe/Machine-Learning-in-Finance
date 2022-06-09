@@ -192,7 +192,128 @@ def LSTM_predict(dataset, model, features_used, predict_from_day, look_back=20):
 
     return pred_recursive_test_inv
 
-def LSTM_plot(dataset, predictions, predict_from_day, features_used, look_back = 20):
+def LSTM_predict_recal(dataset, model, features_used, predict_from_day, look_back=20):
+    # Load the dataset:
+    dataset.reset_index(drop=True, inplace=True)
+    dataframe_full = pd.DataFrame(dataset)
+    dataframe = pd.DataFrame(dataframe_full[features_used])
+    dataset_used = dataframe.values
+    dataset_used = dataset_used.astype('float32')
+
+    # Get test data
+    predict_from_idx = dataset.index[(dataset['Year'] == int(predict_from_day[0:4])) &
+                                     (dataset['Month'] == int(predict_from_day[5:7])) &
+                                     (dataset['Day'] == int(predict_from_day[-2:]))][0]
+
+    train, test = dataset_used[0:predict_from_idx, :], dataset_used[predict_from_idx:len(dataset_used),:]
+
+    # Scale the dataset (*after splitting)
+    scaler_out, scaler_feat = MinMaxScaler(feature_range=(0, 1)), MinMaxScaler(feature_range=(0, 1))
+    train_price_scaled = scaler_out.fit_transform(train[:, :1])
+    train_feat_scaled = scaler_feat.fit_transform(train[:, 1:])
+    test_price_scaled = scaler_out.transform(test[:, :1])
+    test_feat_scaled = scaler_feat.transform(test[:, 1:])
+    train = np.column_stack((train_price_scaled, train_feat_scaled))
+    test = np.column_stack((test_price_scaled, test_feat_scaled))
+
+    # make predictions (recursively) on features
+    pred_feat = pd.DataFrame()
+    for i in np.arange(len(features_used) - 1):
+        # Create pandas dataframe of size (lookback+1)*length of train
+        df = pd.DataFrame(columns=range(look_back + 1), index=range(len(train) - look_back))
+        # Insert first column (our Y-vector)
+        df.iloc[:, :1] = train[look_back:, i + 1].reshape(-1, 1)
+        # Insert the previous look_back values (X-matrix)
+        for j in np.arange(len(df)):
+            df.iloc[j, 1:look_back + 1] = train[j:j + look_back, i + 1]
+
+        # Prepare data for model
+        X_train = df.iloc[:, 1:].astype(float)
+        y_train = df.iloc[:, :1].astype(float)
+        input_train, input_val, truth_train, truth_val = train_test_split(X_train, y_train, test_size=0.2,
+                                                                          random_state=42)
+        lgb_train = lgb.Dataset(input_train, truth_train)
+        lgb_eval = lgb.Dataset(input_val, truth_val, reference=lgb_train)
+        params = {'num_leaves': 100, 'learning_rate': 0.005, 'max_depth': 20, "verbosity": -1}
+
+        # Train the model:
+        gbm = lgb.train(params,
+                        lgb_train,
+                        num_boost_round=2000,
+                        valid_sets=lgb_eval,
+                        early_stopping_rounds=200,
+                        verbose_eval=-1)
+
+        # Make predictions (on future):
+        pred_recursive_test = train[-look_back:,i+1].reshape(-1, 1)
+        
+        dates = dataset['CET'][predict_from_idx:]    
+        dates = np.unique([str(date)[:10] for date in dates])
+
+        today_idx = predict_from_idx
+        for d in np.arange(len(dates)-1):
+            nextday = dates[d+1]
+            nextday_idx = dataset.index[(dataset['Year'] == int(nextday[0:4])) &
+                                     (dataset['Month'] == int(nextday[5:7])) &
+                                     (dataset['Day'] == int(nextday[-2:]))][0]
+            
+            houridxs = nextday_idx - today_idx
+
+            pred_shift_test = scaler_feat.transform(dataset_used[today_idx-look_back:today_idx, 1:])[:,i].reshape(-1,1)
+
+            for k in np.arange(houridxs):
+                input = pd.DataFrame(pred_shift_test[-look_back:].reshape(1, -1))
+                input.columns = pd.RangeIndex(start=1, stop=look_back + 1, step=1)
+                tmp_out = gbm.predict(input, num_iteration=gbm.best_iteration).reshape(1, -1)
+                pred_shift_test = np.concatenate((pred_shift_test, tmp_out), axis=0)
+
+                #len(pred_shift_test)
+            
+            pred_recursive_test = np.concatenate((pred_recursive_test, pred_shift_test[look_back:]), axis=0)
+            today_idx = nextday_idx
+
+        pred_feat = pd.concat([pred_feat, pd.DataFrame(pred_recursive_test[look_back:])], axis=1)
+        print('Feature %s is done' % (i + 1))
+
+    # Predictions of prices
+    dates = dataset['CET'][predict_from_idx:]    
+    dates = np.unique([str(date)[:10] for date in dates])
+
+    today_idx = predict_from_idx
+
+    pred_recursive_test = train[-look_back:,:]
+    for d in np.arange(len(dates)-1):
+        nextday = dates[d+1]
+        nextday_idx = dataset.index[(dataset['Year'] == int(nextday[0:4])) &
+                                     (dataset['Month'] == int(nextday[5:7])) &
+                                     (dataset['Day'] == int(nextday[-2:]))][0]
+            
+        houridxs = nextday_idx - today_idx
+
+        pred_shift_feat = scaler_feat.transform(dataset_used[today_idx-look_back:today_idx, 1:])
+        pred_shift_out = scaler_out.transform(dataset_used[today_idx-look_back:today_idx, 0].reshape(-1,1))
+        pred_shift_test = np.concatenate((pred_shift_out, pred_shift_feat), axis=1)
+
+        for i in np.arange(houridxs):
+            pred_shift_test = np.reshape(pred_shift_test, (1, look_back + i, len(features_used)))
+            input = pred_shift_test[:, -look_back:, :]
+            with torch.no_grad():
+                input_torch = torch.tensor(input, dtype=torch.float)
+                next_price = model(input_torch).numpy().reshape(1, -1)
+            next_feat = pred_feat.iloc[today_idx-predict_from_idx+i, :].values.reshape(1, -1)
+            tmp_out = np.concatenate((next_price, next_feat), axis=1)
+            pred_shift_test = np.concatenate((pred_shift_test.reshape(look_back + i, len(features_used)), tmp_out), axis=0)
+
+        pred_recursive_test = np.concatenate((pred_recursive_test, pred_shift_test[look_back:]), axis=0)
+        today_idx = nextday_idx
+
+    # invert predictions
+    pred_recursive_test_inv = scaler_out.inverse_transform(pred_recursive_test[look_back - 1:, :1])
+    print('Done predicting!')
+
+    return pred_recursive_test_inv
+
+def LSTM_plot(dataset, predictions, predict_from_day, features_used, view = 20):
     # Load the dataset:
     dataset.reset_index(drop=True, inplace=True)
     dataframe_full = pd.DataFrame(dataset)
@@ -210,7 +331,7 @@ def LSTM_plot(dataset, predictions, predict_from_day, features_used, look_back =
     testPredictPlot[splitpoint-1:splitpoint+len(predictions)-1, :] = predictions
     #splitdate = dataframe_full[dataframe_full.index == splitpoint]['CET'].dt.date.item().strftime('%d %b %Y')
 
-    xrangemin, xrangemax = splitpoint-look_back, splitpoint+2*look_back
+    xrangemin, xrangemax = splitpoint-view, splitpoint+2*view
     dates_between = dataset['CET'][xrangemin:xrangemax]
     dates_between = np.unique([str(date)[:10] for date in dates_between])
 
@@ -224,7 +345,7 @@ def LSTM_plot(dataset, predictions, predict_from_day, features_used, look_back =
     plt.plot(dataset_used[:, :1], label='Observations', color = 'b')
     plt.plot(testPredictPlot, label='Predict: Test', color = 'r')
     ax.legend(loc='upper left', frameon=False)
-    plt.title(str(dataset['Name'][0]) + ' ' + str(dataset['Type'][0]) + ' predictions \n ' + 'Lookback: ' + str(look_back))
+    plt.title(str(dataset['Name'][0]) + ' ' + str(dataset['Type'][0]) + ' predictions \n ' + 'View: ' + str(view))
     #fig.suptitle('This sentence is\nbeing split\ninto three lines')
     plt.axvline(x = splitpoint-1, color = 'r', linestyle = '-')
     #plt.text(splitpoint+200,8000, str(splitdate),rotation=0)
