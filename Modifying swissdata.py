@@ -172,6 +172,7 @@ def timefunc(x: pd.DataFrame, colint: int):
     return x
 
 # 4. Applying functions to data
+#os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
 df1 = pd.read_csv('DEU.IDXEUR_Candlestick_1_Hour_BID_01.01.2018-30.04.2022.csv')
 DAX = df1
 DAX['Name'] = "DAX"
@@ -189,12 +190,13 @@ HK = df4
 HK['Name'] = "HK"
 HK['Type'] = "Index"
 df5 = pd.read_csv('GBR.IDXGBP_Candlestick_1_Hour_BID_01.01.2018-30.04.2022.csv')
-FTSE = df4
+FTSE = df5
 FTSE['Name'] = "FTSE"
 FTSE['Type'] = "Index"
 
 df = pd.concat([DAX, HK, SP, NAS, FTSE], ignore_index=True)
 data = timefunc(df, 0)
+data['Name'].value_counts()
 
 data.to_csv('IndexDataHour.txt', index = False, header=True)
 
