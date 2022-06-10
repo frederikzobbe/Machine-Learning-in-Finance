@@ -9,6 +9,7 @@
 import pandas as pd
 import numpy as np
 import torch
+import time as time
 from torch import nn
 from tqdm import tqdm
 from sklearn.preprocessing import MinMaxScaler
@@ -18,7 +19,7 @@ import matplotlib.pyplot as plt
 import math
 import lightgbm as lgb
 
-# 2. Create dataset for a pytorch
+# Function: Create dataset for a pytorch
 def create_dataset(dataset, look_back=1):
     dataX, dataY = [], []
     for i in range(len(dataset)-look_back-1):
@@ -27,8 +28,8 @@ def create_dataset(dataset, look_back=1):
         dataY.append(dataset[i + look_back, 0])
     return np.array(dataX), np.array(dataY)
 
-# 3. Function for training the LSTM model
-def LSTM_train(dataset, train_to_date, features_used, look_back=20, size_hidden=7, learning_rate=0.005, num_epochs=1000):
+# Function: Training the LSTM model (on minute data)
+def LSTM_train(dataset, train_to_date, features_used, look_back=20, size_hidden=7, learning_rate=0.005, num_epochs=1000, pen_negativity_factor=1.5):
     # Load the dataset:
     dataset.reset_index(drop=True, inplace=True)
     dataframe_full = pd.DataFrame(dataset)
@@ -74,17 +75,21 @@ def LSTM_train(dataset, train_to_date, features_used, look_back=20, size_hidden=
 
         def forward(self, x):
             x, _ = self.lstm(x)  # Run LSTM and store the hidden layer outputs
-            x = x[:, -1, :]  # take the last hidden layer
-            x = self.linear(x)  # a normal dense layer
+            x = x[:, -1, :]      # take the last hidden layer
+            x = self.linear(x)   # a normal dense layer
             return x
 
     net = Net()
+
+    #loss_fn = torch.sum(diff[diff >= 0] - 1.5*diff[diff <= 0])
+    # old loss = torch.sum((prediction.flatten() - trainY.flatten() ** 2)
 
     opt = torch.optim.Adam(net.parameters(), lr=learning_rate)
     progress_bar = tqdm(range(num_epochs))
     for epoch in progress_bar:
         prediction = net(trainX)
-        loss = torch.sum((prediction.flatten() - trainY.flatten()) ** 2)
+        diff = (prediction.flatten() - trainY.flatten())
+        loss = torch.sum(diff[diff >= 0] ** 2) + pen_negativity_factor*torch.sum(diff[diff < 0] ** 2)
         progress_bar.set_description(f'Loss = {float(loss)}')
         loss.backward()
         opt.step()
@@ -109,8 +114,12 @@ def LSTM_train(dataset, train_to_date, features_used, look_back=20, size_hidden=
 
     return net
 
-# 3. Function for predicting from the LSTM model
+# Function: Predicting from the LSTM model (on minute data)
 def LSTM_predict(dataset, model, features_used, predict_from_day, look_back=20):
+    
+    # Sets a timer
+    starttime = time.time()
+
     # Load the dataset:
     dataset.reset_index(drop=True, inplace=True)
     dataframe_full = pd.DataFrame(dataset)
@@ -190,9 +199,19 @@ def LSTM_predict(dataset, model, features_used, predict_from_day, look_back=20):
     pred_recursive_test_inv = scaler_out.inverse_transform(pred_recursive_test[look_back - 1:, :1])
     print('Done predicting!')
 
+    # Ends the timer
+    endtime = time.time()
+    dur = endtime - starttime
+    print(' --- The function LSTM_predict took %s minutes to run ---' % (round(dur/60,2)) )
+
     return pred_recursive_test_inv
 
+# Function: Predicting from the LSTM model (on minute data) with recalibrating 
 def LSTM_predict_recal(dataset, model, features_used, predict_from_day, look_back=20):
+    
+    # Sets a timer
+    starttime = time.time()
+    
     # Load the dataset:
     dataset.reset_index(drop=True, inplace=True)
     dataframe_full = pd.DataFrame(dataset)
@@ -206,6 +225,10 @@ def LSTM_predict_recal(dataset, model, features_used, predict_from_day, look_bac
                                      (dataset['Day'] == int(predict_from_day[-2:]))][0]
 
     train, test = dataset_used[0:predict_from_idx, :], dataset_used[predict_from_idx:len(dataset_used),:]
+
+    #dataframe.iloc[0:predict_from_idx, 2].tail(30)
+    #dataframe.iloc[predict_from_idx:,2].head(30)
+    #pd.DataFrame(scaler_feat.inverse_transform(pred_feat)[:50])
 
     # Scale the dataset (*after splitting)
     scaler_out, scaler_feat = MinMaxScaler(feature_range=(0, 1)), MinMaxScaler(feature_range=(0, 1))
@@ -291,7 +314,7 @@ def LSTM_predict_recal(dataset, model, features_used, predict_from_day, look_bac
         houridxs = nextday_idx - today_idx
 
         pred_shift_feat = scaler_feat.transform(dataset_used[today_idx-look_back:today_idx, 1:])
-        pred_shift_out = scaler_out.transform(dataset_used[today_idx-look_back:today_idx, 0].reshape(-1,1))
+        pred_shift_out = scaler_out.transform(dataset_used[today_idx-look_back:today_idx, :1])
         pred_shift_test = np.concatenate((pred_shift_out, pred_shift_feat), axis=1)
 
         for i in np.arange(houridxs):
@@ -311,9 +334,15 @@ def LSTM_predict_recal(dataset, model, features_used, predict_from_day, look_bac
     pred_recursive_test_inv = scaler_out.inverse_transform(pred_recursive_test[look_back - 1:, :1])
     print('Done predicting!')
 
+    # Ends the timer
+    endtime = time.time()
+    dur = endtime - starttime
+    print(' --- The function LSTM_predict_recal took %s minutes to run ---' % (round(dur/60,2)) )
+
     return pred_recursive_test_inv
 
-def LSTM_plot(dataset, predictions, predict_from_day, features_used, view = 20):
+# Function: Plotting predictions against true data
+def LSTM_plot(dataset, predictions, predict_from_day, features_used, look_back, size_hidden, num_epochs, pen_negativity_factor, save, name, view = 20):
     # Load the dataset:
     dataset.reset_index(drop=True, inplace=True)
     dataframe_full = pd.DataFrame(dataset)
@@ -341,19 +370,22 @@ def LSTM_plot(dataset, predictions, predict_from_day, features_used, view = 20):
     x_ticks = np.linspace(start=xrangemin, stop=xrangemax, num=len(dates_between))
 
     # Short period (After traindata ends)
-    fig, ax = plt.subplots(figsize=(8, 5), dpi=130)
+    dpi = 500 if save == 'yes' else 130
+    fig, ax = plt.subplots(figsize=(8, 5), dpi = dpi)
     plt.plot(dataset_used[:, :1], label='Observations', color = 'b')
     plt.plot(testPredictPlot, label='Predict: Test', color = 'r')
     ax.legend(loc='upper left', frameon=False)
-    plt.title(str(dataset['Name'][0]) + ' ' + str(dataset['Type'][0]) + ' predictions \n ' + 'View: ' + str(view))
+    plt.title(str(dataset['Name'][0]) + ' ' + str(dataset['Type'][0]) + ' predictions \n ' + 'Lookback: ' + str(look_back) + ', Hidden states: '+ str(size_hidden) + ', Epochs: ' + str(num_epochs) + ', Penalty: ' + str(pen_negativity_factor) )
     #fig.suptitle('This sentence is\nbeing split\ninto three lines')
     plt.axvline(x = splitpoint-1, color = 'r', linestyle = '-')
     #plt.text(splitpoint+200,8000, str(splitdate),rotation=0)
     plt.xlim([xrangemin, xrangemax])
     plt.xticks(x_ticks, dates_between, rotation=30)
     plt.ylim([min(dataset_used[xrangemin:xrangemax,0])*0.95, max(dataset_used[xrangemin:xrangemax,0])*1.05])
-    plt.show()
 
+    plt.savefig(str(name) + '.png') if (save == 'yes') else plt.show()
+
+# Function: Evaluating predictions from true data
 def pred_eval(dataset, predictions, predict_from_day, days):
     dataset.reset_index(drop=True, inplace=True)
     splitpoint = dataset.index[(dataset['Year'] == int(predict_from_day[0:4])) &
