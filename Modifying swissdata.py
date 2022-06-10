@@ -119,3 +119,52 @@ import plotly.express as px
 fig = px.line(df_sub, x="CET", y="Close", color='Name')
 fig.show()
 
+## ---------------------------- Michael Modifying 20 min index data ----------------------------
+os.chdir("/Users/mikki/Desktop/AppML/New env Personal projects/Final project/20minIndex")
+
+df1 = pd.read_csv('DEU.IDXEUR_Candlestick_20_M_BID_01.01.2018-31.12.2019.csv')
+df2 = pd.read_csv('DEU.IDXEUR_Candlestick_20_M_BID_01.01.2020-30.04.2022.csv')
+
+DAX = pd.concat([df1, df2]).reset_index(drop = True)
+DAX['Name'] = "DAX"
+DAX['Type'] = "Index"
+
+df1 = pd.read_csv('HKG.IDXHKD_Candlestick_20_M_BID_01.01.2018-31.12.2019.csv')
+df2 = pd.read_csv('HKG.IDXHKD_Candlestick_20_M_BID_01.01.2020-30.04.2022.csv')
+HK = pd.concat([df1, df2]).reset_index(drop = True)
+HK['Name'] = "HK"
+HK['Type'] = "Index"
+
+df1 = pd.read_csv('USA500.IDXUSD_Candlestick_20_M_BID_01.01.2018-31.12.2020.csv')
+df2 = pd.read_csv('USA500.IDXUSD_Candlestick_20_M_BID_01.01.2021-30.04.2022.csv')
+SP = pd.concat([df1, df2]).reset_index(drop = True)
+SP['Name'] = "S&P"
+SP['Type'] = "Index"
+
+df1 = pd.read_csv('USATECH.IDXUSD_Candlestick_20_M_BID_01.01.2018-31.12.2019.csv')
+df2 = pd.read_csv('USATECH.IDXUSD_Candlestick_20_M_BID_01.01.2020-30.04.2022.csv')
+NAS = pd.concat([df1, df2]).reset_index(drop = True)
+NAS['Name'] = "NASDAQ"
+NAS['Type'] = "Index"
+
+df1 = pd.read_csv('GBR.IDXGBP_Candlestick_20_M_BID_01.01.2018-31.12.2019.csv')
+df2 = pd.read_csv('GBR.IDXGBP_Candlestick_20_M_BID_01.01.2020-30.04.2022.csv')
+FTSE = pd.concat([df1, df2]).reset_index(drop = True)
+FTSE['Name'] = "FTSE"
+FTSE['Type'] = "Index"
+
+
+# I Need to add 1 hour to my data in order to ensure time consistency with our other datasets.
+FTSE.dtypes
+IndexdataHour_DB.dtypes
+
+IndexDat20Min = pd.concat([DAX, FTSE, SP, NAS, HK]).reset_index(drop = True)
+IndexDat20Min.dtypes
+IndexDat20Min['Gmt time'] = pd.to_datetime(IndexDat20Min['Gmt time'].str[:-4], format= "%d.%m.%Y %H:%M:%S")
+IndexDat20Min['CET'] = IndexDat20Min['Gmt time'] + pd.DateOffset(hours = 1)
+IndexDat20Min["Year"] = IndexDat20Min.CET.dt.year
+IndexDat20Min['Month'] = IndexDat20Min.CET.dt.month
+IndexDat20Min['Day'] = IndexDat20Min.CET.dt.day
+
+os.chdir("/Users/mikki/Desktop/AppML/New env Personal projects/Final project/data/SwissData")
+IndexDat20Min.to_csv("20MinIndexData", index = None, index_label=None)
