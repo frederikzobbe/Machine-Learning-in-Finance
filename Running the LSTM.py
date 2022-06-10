@@ -14,8 +14,6 @@ daxdatah = idxdatah[idxdatah['Name'] == 'DAX']
 #spdatah = idxdatah[idxdatah['Name'] == 'S&P']
 #hkh[['CET', 'Volume']].head(20)
 
-daxdatad
-
 train_to_date = '2021-06-30'
 features_tmp = ['Close', 'Volume']
 features_tmp = ['Close', 'Volume', 'ROC-5', 'ROC-20', 'EMA-10', 'EMA-200', '00 CPI Total']
@@ -23,7 +21,7 @@ features_used = ['Close', 'Volume', 'Hour', 'ROC-5', 'ROC-20', 'EMA-10', 'EMA-20
                      'Car 3-6m', 'Total', '00 CPI Total', '01.1 Food']
 
 look_back                   = 100
-dataset                     = daxdatad
+dataset                     = daxdatah
 features_used               = features_tmp
 size_hidden                 = 100
 learning_rate               = 0.005
