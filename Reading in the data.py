@@ -12,26 +12,21 @@
 # 1. Reading in packages
 import pandas as pd
 import os as os
-import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-from datetime import datetime
-import seaborn as sns
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # 2. Reading in data
 #os.chdir("/Users/frederikzobbe/Documents/GitHub/Machine-Learning-in-Finance/Data")
-os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
+#os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
 #os.chdir("/Users/mathiasfrederiksen/Desktop/Forsikringsmatematik/5. år/Applied Machine Learning/Data/SwissData")
-os.chdir("/Users/mikki/Desktop/AppML/New env Personal projects/Final project/data/SwissData")
+#os.chdir("/Users/mikki/Desktop/AppML/New env Personal projects/Final project/data/SwissData")
 
 date_cols = ['CET']
 idxdatah = pd.read_csv('IndexDataHour_v3.txt', index_col=None, parse_dates=date_cols, engine='python')
 
-#df.sort_values(by=['Name', 'Year', 'Month', 'Day', 'Hour', 'Minute'], inplace = True, ascending = (1, 1, 1, 1, 1, 1))
-
 ## ------------------------- DaxData -----------------------------------------
-daxdata = pd.read_csv('DaxData.txt', index_col=None, parse_dates=['CET'], engine='python')
+daxdatahour = pd.read_csv('DaxDataHour.txt', index_col=None, parse_dates=['CET'], engine='python')
 # Needs fixing. TmpTime still present (07/06)
 
 ## ------------------------ CryptoData ---------------------------------------
@@ -40,6 +35,19 @@ cryptodata = pd.read_csv('CryptoData.txt', index_col=None, parse_dates=['CET'], 
 
 ## ------------------------ IndexData ----------------------------------------
 indexdataHour = pd.read_csv("IndexDataHour.txt", index_col=None, parse_dates=['CET'], engine='python')
+
+## ----------------------- IndexData dollarbar -------------------------------
+
+IndexdataHour_DB = pd.read_csv("IndexDataHourly_DB", index_col=None, parse_dates=['CET'], engine='python')
+
+## ---------------------- IndexData20min -------------------------------------------------------------
+IndexDat20Min = pd.read_csv("20MinIndexData", index_col=None, parse_dates=['CET'], engine='python')
+IndexDat20Min = IndexDat20Min.drop(["Gmt time"], axis = 1) # to ensure consistency with other datasets
+
+IndexDat20Min_DB = pd.read_csv("IndexData20Min_DB", index_col=None, parse_dates=['CET'], engine='python')
+
+IndexDat20Min_varying_DB = pd.read_csv('index_20min_varyingDB', index_col=None, parse_dates=['CET'], engine='python')
+
 
 
 
