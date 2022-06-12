@@ -420,3 +420,243 @@ def pred_eval(dataset, predictions, predict_from_day, days):
     result[columns[6]]  = (pred-obs)/obs*100    
 
     return result
+
+def afkast(data, begin_CET, pred_true, date_cet = 'CET'): #predict data
+    
+    stock_returns = pd.DataFrame()
+    
+    df_uniq = pd.DataFrame({date_cet : np.sort(pd.unique(data[date_cet]), axis = 0)})
+    for name in pd.unique(data['Name']):
+        uniq = pd.unique(data[data['Name'] == name][date_cet])
+        uniq = pd.DataFrame({date_cet : uniq})
+        df_uniq = df_uniq.merge(uniq, how = 'inner', on = [date_cet])
+    
+    if(pred_true == 'TRUE' or pred_true == 'true' or pred_true == 'True'):
+    
+        for name in pd.unique(data['Name']):
+            df_name = data[data['Name'] == name].reset_index(drop = True)
+            df_sub = df_name.merge(df_uniq, how = 'inner', on = [date_cet])
+            idx = df_sub[df_sub[date_cet] == begin_CET].index[0]
+            df = df_sub.iloc[idx:,:].reset_index(drop = True)
+            
+            df['Predictions'][0] = df['Close'][0]
+            
+            stock_returns[name] = np.array(df['Predictions'].pct_change())
+    
+        stock_returns = stock_returns.dropna() # drop the first row.'
+        
+    else:
+        
+        for name in pd.unique(data['Name']):
+            df_name = data[data['Name'] == name].reset_index(drop = True)
+            df_sub = df_name.merge(df_uniq, how = 'inner', on = [date_cet])
+            idx = df_sub[df_sub[date_cet] == begin_CET].index[0]
+            df = df_sub.iloc[idx:,:].reset_index(drop = True)
+            
+            stock_returns[name] = np.array(df['Close'].pct_change())
+    
+        stock_returns = stock_returns.dropna() # drop the first row.'
+        
+    return stock_returns
+
+# Historical volatility
+
+data=pred_data
+begin_CET=begin_date
+pred_true='TRUE'
+date_cet= 'Date'
+
+def volatility(data, begin_CET, pred_true, date_cet = 'CET'): #predict data, need CET, Name, Close, pred
+    
+    df_vol = pd.DataFrame()
+    
+    #date = begin_CET
+    #year = date.dt.year.values[0]
+    #new_year = str(year-1)
+    #date = new_year + date[4:]
+    
+    df_uniq = pd.DataFrame({date_cet : np.sort(pd.unique(data[date_cet]), axis = 0)})
+    for name in pd.unique(data['Name']):
+        uniq = pd.unique(data[data['Name'] == name][date_cet])
+        uniq = pd.DataFrame({date_cet : uniq})
+        df_uniq = df_uniq.merge(uniq, how = 'inner', on = [date_cet])
+    
+    if(pred_true == 'TRUE' or pred_true == 'true' or pred_true == 'True'):
+        annual_business_days=200        
+        for name in pd.unique(data['Name']):
+            df_name = data[data['Name'] == name].reset_index(drop=True)
+            df_sub = df_name.merge(df_uniq, how = 'inner', on = [date_cet])
+            NAN = df_sub['Predictions'].isnull()
+            idx = 0 if (sum(NAN == True) == 0) else [i for i, x in enumerate(NAN) if x][-1] 
+            #idx = df_name[df_name[date_cet] == date].index.tolist()
+            df = df_sub.iloc[(idx-annual_business_days):,:].reset_index(drop=True)
+            vol = []
+        
+            for n in np.arange(df.shape[0]-annual_business_days-1):
+                df_close = df['Close'][n+1:n+annual_business_days]  # if we want vol for 01/01-2022, then we want to start at 02/01-2021
+                df_pred = df['Predictions'][n+annual_business_days+1]
+                df_merge = np.concatenate([df_close, pd.Series(df_pred)])
+                vol.append(df_merge.std() / np.sqrt(annual_business_days))
+        
+            df_vol[name] = np.array(vol)
+            
+    else:
+        annual_business_days = 200
+        for name in pd.unique(data['Name']):
+            df_name = data[data['Name'] == name].reset_index(drop=True)
+            df_sub = df_name.merge(df_uniq, how = 'inner', on = [date_cet])
+            NAN = df_sub['Predictions'].isnull()
+            idx = [i for i, x in enumerate(NAN) if x][-1]
+            #idx = df_name[df_name[date_cet] == date].index.tolist()
+            df = df_sub.iloc[idx-annual_business_days:,:].reset_index(drop=True)
+    
+            vol = []
+            
+        
+            for n in np.arange(df.shape[0]-annual_business_days-1):
+                df_close = df[n+1:n+annual_business_days+1]  # if we want vol for 01/01-2022, then we want to start at 02/01-2021
+                vol.append(df_close['Close'].std() / np.sqrt(annual_business_days))
+        
+            df_vol[name] = np.array(vol)
+        
+        
+        
+    return df_vol
+
+def portfolio(data, numAssets, numRev, data_vol): ## Afkast data og Vol data
+    
+    df = data.copy()
+    assets_used_daliy = pd.DataFrame()
+    selected_assets = []
+    avg_daily_ret = [0]
+    
+    for i in range(len(df)):
+        if len(selected_assets ) > 0:
+            avg_daily_ret.append(df[selected_assets].iloc[i,:].mean()) # Assumes we invest equally in the selected assets
+            bad_assets = df[selected_assets].iloc[i,:].sort_values(ascending=True)[:numRev].index.values.tolist()
+            selected_assets  = [t for t in selected_assets if t not in bad_assets]
+            
+        fill = numAssets - len(selected_assets)
+        
+        vol = data_vol.iloc[i,:]
+        vol_norm = (vol - min(vol)) / (max(vol) - min(vol))  # values between 0 and 1. If used, use below as return_vol
+        return_vol = df.iloc[i,:]/(1+vol_norm)
+        
+        #return_vol = df.iloc[i,:]/(vol)
+        
+        new_picks = return_vol.sort_values(ascending=False)[:fill].index.values.tolist()
+        selected_assets  = selected_assets  + new_picks
+        print(selected_assets)
+        assets_used_daliy[i] = selected_assets
+        
+    returns_df = pd.DataFrame(np.array(avg_daily_ret),columns=["daily_returns"])
+    return returns_df, assets_used_daliy.T 
+
+def cagr(data):  # portfolio data
+    df = data.copy()
+    df['cumulative_returns'] = (1 + df['daily_returns']).cumprod()
+    trading_days = len(df)
+    n = len(df)/ trading_days
+    cagr = (df['cumulative_returns'][len(df)-1])**(1/n) - 1
+    return cagr
+
+def maximum_drawdown(data):
+    df = data.copy()
+    df['cumulative_returns'] =  (1 + df['daily_returns']).cumprod()
+    df['cumulative_max'] = df['cumulative_returns'].cummax()
+    df['drawdown'] = df['cumulative_max'] - df['cumulative_returns']
+    df['drawdown_pct'] = df['drawdown'] / df['cumulative_max']
+    max_dd = df['drawdown_pct'].max()
+    return max_dd
+
+def calmar_ratio(data, rf):
+    df = data.copy()
+    calmar = (CAGR(df) - rf) / maximum_drawdown(df)
+    return calmar
+
+def hour_to_day(x: pd.DataFrame):
+
+    starttime = time.time()
+    
+    x.reset_index(inplace=True, drop=False)
+
+    x['Hour']   = x['CET'].dt.hour
+    x['Date']   = [str(date)[:10] for date in x['CET']]
+
+    names  = x['Name'].unique()
+    dates = x['Date']
+
+    alldates = np.unique([str(date) for date in dates])
+
+    for name in names:
+        date = x[x['Name'] == name]['Date']
+        tmp   = np.unique([str(date) for date in date])
+        alldates  = set(alldates).intersection(set(tmp))
+
+    idxs_all = []
+    for d in alldates:
+        array = []
+        idxs_day = x[(x['Date'] == d)].index
+
+        for name in names:
+            tmparray = x[(x['Name'] == name) & (x['Date'] == d)]['Hour']
+            array.append(tmparray.values)
+
+        matrix = pd.DataFrame(index=range(len(array[0])),columns=range(len(names)-1))
+        for i in np.arange(len(names)-1):
+            for j, value in enumerate(array[0]):
+                matrix.iloc[j,i] = min(np.abs(value - array[i+1]))
+    
+        sumtrix = matrix.sum(axis=1)
+        element = sumtrix.index[sumtrix == min(sumtrix)][0]
+
+        idxs_all.append(idxs_day[element])
+
+        for i in np.arange(len(names)-1):
+            dist    = min(np.abs(array[i+1]-array[0][element]))
+            tmptrix = np.abs(array[i+1]-array[0][element])
+            place   = np.where(tmptrix == dist)[0][0]
+            
+            idxs_all.append( (x[(x['Name'] == names[i+1]) & (x['Date'] == d)].index)[place].item() ) 
+    
+    x.drop("index", axis=1, inplace=True)
+    x.drop("Hour", axis=1, inplace=True)
+    
+    # Ends the timer
+    endtime = time.time()
+    dur = endtime - starttime
+    print(' --- The function hour_to_day took %s seconds to run ---' %round(dur,2))
+
+    return x.iloc[idxs_all,:].sort_values(by=['CET']).reset_index(drop=True)
+
+
+
+
+
+# Load data to day-data (re-balancing once a day)
+pred_data = hour_to_day(datapred.copy())
+
+## Pred, the return our prediction say we would get
+begin_date = '2021-06-30'
+returns_pred = afkast(data=pred_data, begin_CET=begin_date, pred_true='TRUE', date_cet='Date')
+
+
+
+
+vol_pred = volatility(pred_data, begin_date, 'TRUE')
+rebalanced_portfolio_pred, assets_list = portfolio(returns_pred, 1, 1, vol_pred)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
