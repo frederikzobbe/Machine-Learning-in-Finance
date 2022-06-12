@@ -17,39 +17,34 @@ import matplotlib.pyplot as plt
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # 2. Reading in data
-#os.chdir("/Users/frederikzobbe/Documents/GitHub/Machine-Learning-in-Finance/Data")
-#os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
+os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
 #os.chdir("/Users/mathiasfrederiksen/Desktop/Forsikringsmatematik/5. år/Applied Machine Learning/Data/SwissData")
 #os.chdir("/Users/mikki/Desktop/AppML/New env Personal projects/Final project/data/SwissData")
 
-date_cols = ['CET']
-idxdatah = pd.read_csv('IndexDataHour_v3.txt', index_col=None, parse_dates=date_cols, engine='python')
+## ------------------------- ValutaData -----------------------------------------
+valutadatahour = pd.read_csv('ValutaDataHour.txt', index_col=None, parse_dates=['CET'], engine='python')
 
-## ------------------------- DaxData -----------------------------------------
-daxdatahour = pd.read_csv('DaxDataHour.txt', index_col=None, parse_dates=['CET'], engine='python')
-# Needs fixing. TmpTime still present (07/06)
-
-## ------------------------ CryptoData ---------------------------------------
-# Needs fixing. TmpTime still present (07/06)
-cryptodata = pd.read_csv('CryptoData.txt', index_col=None, parse_dates=['CET'], engine='python')
+## ------------------------ CommoData ---------------------------------------
+commodatahour = pd.read_csv('CommoDataHour.txt', index_col=None, parse_dates=['CET'], engine='python')
 
 ## ------------------------ IndexData ----------------------------------------
 indexdataHour = pd.read_csv("IndexDataHour.txt", index_col=None, parse_dates=['CET'], engine='python')
 
-## ----------------------- IndexData dollarbar -------------------------------
+## ------------------------ Subset predictions ----------------------------------------
+valutadatahour[valutadatahour['Name'] == 'ETHER']
 
-IndexdataHour_DB = pd.read_csv("IndexDataHourly_DB", index_col=None, parse_dates=['CET'], engine='python')
+valutadatahour['Name'].value_counts()
 
-## ---------------------- IndexData20min -------------------------------------------------------------
-IndexDat20Min = pd.read_csv("20MinIndexData", index_col=None, parse_dates=['CET'], engine='python')
-IndexDat20Min = IndexDat20Min.drop(["Gmt time"], axis = 1) # to ensure consistency with other datasets
-
-IndexDat20Min_DB = pd.read_csv("IndexData20Min_DB", index_col=None, parse_dates=['CET'], engine='python')
-
-IndexDat20Min_varying_DB = pd.read_csv('index_20min_varyingDB', index_col=None, parse_dates=['CET'], engine='python')
-
+## ------------------------ Data read for predictions ----------------------------------------
+os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData/predictions")
+DAX_8ha = pd.read_csv("DAX_8ha_pred_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+SP_8ha = pd.read_csv("SP_8ha_pred_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+NAS_8ha = pd.read_csv("NASDAQ_8ha_pred_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+HK_8ha = pd.read_csv("HK_8ha_pred_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
 
 
+datapred = pd.concat([DAX_8ha, SP_8ha, NAS_8ha, HK_8ha])
+datapred.columns = ['CET', 'Name', 'Close', 'Predictions', 'Diff']
 
 
 
