@@ -17,7 +17,7 @@ def read_and_prepare_data(sec_code,columns):
     return prices
 
 class Rl_env():
-    def __init__(self,sec_code,scaler,period_length=10,columns=['Close']):
+    def __init__(self,sec_code,scaler,period_length=10,columns=['Open','Close','Volume','Low','High']):
         self.full_dataset=read_and_prepare_data(sec_code,columns)
         self.index=self.full_dataset.index
         print(f'loaded {self.full_dataset.shape[0]} rows and {self.full_dataset.shape[1]} columns from code {sec_code}')
@@ -73,7 +73,7 @@ class Rl_env():
         last_day_of_state = self.scale_data(self.state,inverse_transform=True)[prediction_variable].iloc[-1]
         if last_day_of_state == 0:
             relative_change = next_day[prediction_variable].iloc[0]/self.eps 
-            
+
         relative_change = (next_day[prediction_variable].iloc[0]-last_day_of_state)/last_day_of_state
         return relative_change
 
