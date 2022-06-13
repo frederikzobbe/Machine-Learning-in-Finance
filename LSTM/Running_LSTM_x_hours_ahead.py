@@ -1,5 +1,4 @@
 
-
 # 1. Reading in packages
 import pandas as pd
 import numpy as np
@@ -23,14 +22,14 @@ def create_dataset(dataset, look_back=1, hours_ahead=1):
     return np.array(dataX), np.array(dataY)
 
 
-dataset      = ftsedatah
+dataset      = nasdaqdatah
 train_to_date='2021-06-30'
 features_used=['Close', 'Volume', 'Hour', 'ROC-5', 'ROC-20', 'EMA-10', 'EMA-200', 'Moterbike and car <3m', 
                      'Car 3-6m', 'Total', '00 CPI Total', '01.1 Food']
-look_back                  = 40
-size_hidden                = 70
-learning_rate              = 0.005
-num_epochs                 = 200
+look_back                  = 50
+size_hidden                = 30
+learning_rate              = 0.01
+num_epochs                 = 1000
 pen_negativity_factor      = 1.4
 hours_ahead                = 8
 
@@ -100,6 +99,14 @@ for epoch in progress_bar:
     loss.backward()
     opt.step()
     opt.zero_grad()
+    
+    with torch.no_grad():
+        testPredict = net(testX).numpy()
+    testPredict = scaler_out.inverse_transform(testPredict)
+    testY_inv = scaler_out.inverse_transform([testY.numpy()])
+    testScore = math.sqrt(mean_squared_error(testY_inv[0], testPredict[:, 0]))
+    print('Test Score: %.2f RMSE' % (testScore))
+        
 
 # make predictions
 with torch.no_grad():
