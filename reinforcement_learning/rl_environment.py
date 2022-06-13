@@ -10,7 +10,7 @@ all_prices.set_index('Date',inplace=True)
 def read_and_prepare_data(sec_codes,columns):
     if isinstance(sec_codes,(list,tuple,np.ndarray)):
         prices = all_prices.loc[all_prices['SecuritiesCode'].isin(sec_codes)][columns+['SecuritiesCode']]
-        new_prices = pd.DataFrame(index=prices.index,columns=sec_codes)
+        new_prices = pd.DataFrame(index=prices.index.unique(),columns=sec_codes)
         for sec_code in sec_codes:
             new_prices[sec_code] = prices.loc[prices['SecuritiesCode'] == sec_code][columns]
         prices = new_prices
@@ -68,7 +68,7 @@ class Rl_env():
     def get_next_day(self,scale=True):
         row = self.full_dataset.iloc[[self.period_start+self.period_length]]
         if scale:
-            return scale_data(row,new_fit=False)
+            return scale_data(self.scaler,row,new_fit=False)
         else:
             return row
 
@@ -82,7 +82,7 @@ class Rl_env():
 
     def get_rel_change(self,prediction_variable='Close'):
         next_day = self.get_next_day(scale=False)
-        last_day_of_state = scale_data(self.state,inverse_transform=True)[prediction_variable].iloc[-1]
+        last_day_of_state = scale_data(self.scaler,self.state,inverse_transform=True)[prediction_variable].iloc[-1]
         if last_day_of_state == 0:
             relative_change = next_day[prediction_variable].iloc[0]/self.eps 
 
@@ -91,7 +91,7 @@ class Rl_env():
 
     def reset_state(self,):
         self.state = self.full_dataset.iloc[:self.period_length]
-        self.state = scale_data(self.state,new_fit=True)
+        self.state = scale_data(self.scaler,self.state,new_fit=True)
 
         self.period_start=0
         
@@ -115,9 +115,50 @@ class Rl_env_multiple():
 
         self.scaler = scaler
         self.period_length = period_length
+        self.period_start = 0
 
         if scale_everything:
             self.unscaled_dataset = self.full_dataset.copy()
             self.full_dataset = scale_data(self.scaler,self.full_dataset,new_fit = True)
             self.full_dataset.plot()
+
+        self.reset_state()
+        self.current_distribution = np.ones(len(sec_codes))/len(sec_codes)
+
+        # self.current_value = self.calc_value(self.current_distribution,self.state.iloc[-1])
+
+    def calc_value(self,distribution,state):
+        value = distribution * state
+        return value.sum()
+
+    def step_period(self,):
+        self.period_start+=1
+        self.state = self.full_dataset.iloc[self.period_start:self.period_start+self.period_length]
+
+    def reset_state(self,):
+        self.state = self.full_dataset.iloc[:self.period_length]
+        self.period_start=0
         
+    # def get_rel_change(self):
+    #     next_day = self.get_next_day(scale=False)
+    #     last_day_of_state = scale_data(self.state,inverse_transform=True).iloc[-1]
+    #     if last_day_of_state == 0:
+    #         relative_change = next_day.iloc[0]/self.eps 
+
+    #     relative_change = (next_day.iloc[0]-last_day_of_state)/last_day_of_state
+    #     return relative_change
+
+    def get_next_day(self,scale=False,inv_scale=False):
+        row = self.full_dataset.iloc[self.period_start+self.period_length]
+        if scale:
+            return scale_data(self.scaler,row,new_fit=False)
+        if inv_scale:
+            return scale_data(self.scaler,row,inverse_transform=True)
+        else:
+            return row
+
+    def get_reward_and_set_distribution(self,distribution):
+        old_value = self.calc_value(distribution,self.state.iloc[-1])
+        self.current_distribution = distribution
+        new_value = self.calc_value(self.current_distribution,self.get_next_day())
+        return new_value-old_value
