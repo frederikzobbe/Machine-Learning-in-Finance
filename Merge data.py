@@ -74,6 +74,15 @@ def EMA(df, days, smoothing = 2):
     else:
         print('Input need to be a Pandas DataFrame')
 
+def logreturn(df):
+    if isinstance(df, pd.DataFrame):
+        
+        df['logreturn'] = np.log((df['Close'])/ (df['Close'].shift(1))).fillna(0)
+        return df
+        
+    else:
+        print('Input need to be a Pandas DataFrame')
+
 # 7. Calculate (and concatenate) values
 ROC_5 = ROC(df, 5)
 ROC_10 = ROC(df, 10)
@@ -85,8 +94,9 @@ EMA_50 = EMA(df, 10)
 EMA_200 = EMA(df, 15)
 
 df_dummy1 = pd.DataFrame({'ROC-5' : ROC_5, 'ROC-10' : ROC_10, 'ROC-15' : ROC_15, 'ROC-20' : ROC_20})
-df_dummy2 = pd.DataFrame({'EMA-5' : EMA_10, 'EMA-10' : EMA_50, 'EMA-15' : EMA_200})
+df_dummy2 = pd.DataFrame({'EMA-5' : EMA_10, 'EMA_50' : EMA_50, 'EMA_200' : EMA_200})
 df = pd.concat([df,df_dummy1, df_dummy2], axis = 1)
+df = logreturn(df)
 
 # 8. Merge Storebæltsbrodata and forbrugerprisindeks på data
 merged_df = df.merge(df_SB, how = 'inner', on = ['Year', 'Month'])
