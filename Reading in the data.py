@@ -22,17 +22,16 @@ os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applie
 #os.chdir("/Users/mikki/Desktop/AppML/New env Personal projects/Final project/data/SwissData")
 
 ## ------------------------- ValutaData -----------------------------------------
-valutadatahour = pd.read_csv('ValutaDataHour.txt', index_col=None, parse_dates=['CET'], engine='python')
+valutadatahour = pd.read_csv('ValutaDataHour_v3.txt', index_col=None, parse_dates=['CET'], engine='python')
 
 ## ------------------------ CommoData ---------------------------------------
-commodatahour = pd.read_csv('CommoDataHour.txt', index_col=None, parse_dates=['CET'], engine='python')
+commodatahour = pd.read_csv('CommoDataHour_v3.txt', index_col=None, parse_dates=['CET'], engine='python')
 
 ## ------------------------ IndexData ----------------------------------------
-indexdataHour = pd.read_csv("IndexDataHour.txt", index_col=None, parse_dates=['CET'], engine='python')
+idxdatah = pd.read_csv("IndexDataHour_v3.txt", index_col=None, parse_dates=['CET'], engine='python')
 
-## ------------------------ Subset predictions ----------------------------------------
+## ------------------------ Subset Data ----------------------------------------
 valutadatahour[valutadatahour['Name'] == 'ETHER']
-
 valutadatahour['Name'].value_counts()
 
 ## ------------------------ Data read for predictions ----------------------------------------
