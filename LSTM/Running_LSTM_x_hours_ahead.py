@@ -21,18 +21,33 @@ def create_dataset(dataset, look_back=1, hours_ahead=1):
         dataY.append(dataset[i + look_back + hours_ahead - 1, 0])
     return np.array(dataX), np.array(dataY)
 
+dataset      = idxdatah[idxdatah['Name'] == 'DAX']
 
-dataset      = nasdaqdatah
-train_to_date='2021-06-30'
-features_used=['Close', 'Volume', 'Hour', 'ROC-5', 'ROC-20', 'EMA-10', 'EMA-200', 'Moterbike and car <3m', 
-                     'Car 3-6m', 'Total', '00 CPI Total', '01.1 Food']
-look_back                  = 50
-size_hidden                = 30
-learning_rate              = 0.01
-num_epochs                 = 1000
+#df = dataset1.copy()
+#df.index = df["CET"]
+#df.sort_index(inplace=True)
+#df['Close'].plot()
+#plt.axvline(x='2020-02-01')
+#plt.axvline(x='2020-06-01')
+#plt.axvline(x='2021-04-01')
+#plt.show()
+
+train_end_date  = '2020-01-31'
+val_start_date  = '2020-06-01'
+test_start_date = '2021-04-01'
+test_end_date   = '2022-04-29'
+
+features_all = list(['Close']) + list(set(list(dataset.columns)) - set(list(['Open', 'High', 'Low', 'Name', 'Type', 'CET', 'Minute', 'Close'])))
+#train_to_date ='2021-06-30'
+#features_used =['Close', 'Volume', 'Hour', 'ROC-5', 'ROC-20', 'EMA-10', 'EMA-200', 'Moterbike and car <3m', 'Car 3-6m', 'Total', '00 CPI Total', '01.1 Food']
+
+look_back                  = 100
+size_hidden                = 50
+learning_rate              = 0.005
+num_epochs                 = 200
 pen_negativity_factor      = 1.4
-hours_ahead                = 8
-
+hours_ahead                = 12
+features_used              = features_all
 
 # Load the dataset:
 dataset.reset_index(drop=True, inplace=True)
@@ -42,32 +57,46 @@ dataset_used = dataframe.values
 dataset_used = dataset_used.astype('float32')
 
 # Get train data
-train_to_idx = dataset.index[(dataset['Year'] == int(train_to_date[0:4])) &
-                             (dataset['Month'] == int(train_to_date[5:7])) &
-                             (dataset['Day'] == int(train_to_date[-2:]))][0]
+train_end_idx = dataset.index[(dataset['Year'] == int(train_end_date[0:4])) &
+                             (dataset['Month'] == int(train_end_date[5:7])) &
+                             (dataset['Day'] == int(train_end_date[-2:]))][0]
 
-train, test = dataset_used[0:train_to_idx, :], dataset_used[train_to_idx:len(dataset_used),:]
+val_start_idx = dataset.index[(dataset['Year'] == int(val_start_date[0:4])) &
+                             (dataset['Month'] == int(val_start_date[5:7])) &
+                             (dataset['Day'] == int(val_start_date[-2:]))][0]
+
+test_start_idx = dataset.index[(dataset['Year'] == int(test_start_date[0:4])) &
+                             (dataset['Month'] == int(test_start_date[5:7])) &
+                             (dataset['Day'] == int(test_start_date[-2:]))][0]
+
+train, val, test = dataset_used[0:train_end_idx, :], dataset_used[val_start_idx:test_start_idx,:], dataset_used[test_start_idx:len(dataset_used),:]
 
 # Scale the dataset (*after splitting)
 scaler_out, scaler_feat = MinMaxScaler(feature_range=(0, 1)), MinMaxScaler(feature_range=(0, 1))
 train_price_scaled = scaler_out.fit_transform(train[:, :1])
 train_feat_scaled = scaler_feat.fit_transform(train[:, 1:])
+val_price_scaled = scaler_out.transform(val[:, :1])
+val_feat_scaled = scaler_feat.transform(val[:, 1:])
 test_price_scaled = scaler_out.transform(test[:, :1])
 test_feat_scaled = scaler_feat.transform(test[:, 1:])
 train = np.column_stack((train_price_scaled, train_feat_scaled))
-test = np.column_stack((test_price_scaled, test_feat_scaled))
+val   = np.column_stack((val_price_scaled, val_feat_scaled))
+test  = np.column_stack((test_price_scaled, test_feat_scaled))
 
 # Reshape into X = t and Y = t + 1
-trainX, trainY = create_dataset(train, look_back, hours_ahead=hours_ahead)
-testX, testY = create_dataset(test, look_back, hours_ahead=hours_ahead)
-
+trainX, trainY  = create_dataset(train, look_back, hours_ahead=hours_ahead)
+valX, valY      = create_dataset(val, look_back, hours_ahead=hours_ahead)
+testX, testY    = create_dataset(test, look_back, hours_ahead=hours_ahead)
 
 # Reshape input to be [samples, time steps, features]
-trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], len(features_used)))
-testX = np.reshape(testX, (testX.shape[0], testX.shape[1], len(features_used)))
+trainX  = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], len(features_used)))
+valX    = np.reshape(valX, (valX.shape[0], valX.shape[1], len(features_used)))
+testX   = np.reshape(testX, (testX.shape[0], testX.shape[1], len(features_used)))
 
 trainX = torch.tensor(trainX, dtype=torch.float)
 trainY = torch.tensor(trainY, dtype=torch.float)
+valX = torch.tensor(valX, dtype=torch.float)
+valY = torch.tensor(valY, dtype=torch.float)
 testX = torch.tensor(testX, dtype=torch.float)
 testY = torch.tensor(testY, dtype=torch.float)
 
@@ -86,9 +115,11 @@ class Net(nn.Module):
 
 net = Net()
 
-#loss_fn = torch.sum(diff[diff >= 0] - 1.5*diff[diff <= 0])
+# loss_fn = torch.sum(diff[diff >= 0] - 1.5*diff[diff <= 0])
 # old loss = torch.sum((prediction.flatten() - trainY.flatten() ** 2)
 
+val_scores = []
+train_scores = []
 opt = torch.optim.Adam(net.parameters(), lr=learning_rate)
 progress_bar = tqdm(range(num_epochs))
 for epoch in progress_bar:
@@ -101,101 +132,65 @@ for epoch in progress_bar:
     opt.zero_grad()
     
     with torch.no_grad():
-        testPredict = net(testX).numpy()
-    testPredict = scaler_out.inverse_transform(testPredict)
-    testY_inv = scaler_out.inverse_transform([testY.numpy()])
-    testScore = math.sqrt(mean_squared_error(testY_inv[0], testPredict[:, 0]))
-    print('Test Score: %.2f RMSE' % (testScore))
-        
+        valPredict = net(valX).numpy()
+        trainPredict = net(trainX).numpy()
+    valPredict = scaler_out.inverse_transform(valPredict)
+    valY_inv = scaler_out.inverse_transform([valY.numpy()]) # Change to val dataset later on
+    valScore = math.sqrt(mean_squared_error(valY_inv[0], valPredict[:, 0]))
+    val_scores.append(valScore)
+
+    trainPredict = scaler_out.inverse_transform(trainPredict)
+    trainY_inv = scaler_out.inverse_transform([trainY.numpy()]) # Change to val dataset later on
+    trainScore = math.sqrt(mean_squared_error(trainY_inv[0], trainPredict[:, 0]))
+    train_scores.append(trainScore)
+    #print('Test Score: %.2f RMSE' % (testScore))
 
 # make predictions
 with torch.no_grad():
-    trainPredict = net(trainX).numpy()
-    testPredict = net(testX).numpy()
+    trainPredict    = net(trainX).numpy()
+    valPredict      = net(valX).numpy()
+    testPredict     = net(testX).numpy()
 
 # invert predictions
-trainPredict = scaler_out.inverse_transform(trainPredict)
-trainY_inv = scaler_out.inverse_transform([trainY.numpy()])
-testPredict = scaler_out.inverse_transform(testPredict)
-testY_inv = scaler_out.inverse_transform([testY.numpy()])
+trainPredict    = scaler_out.inverse_transform(trainPredict)
+trainY_inv      = scaler_out.inverse_transform([trainY.numpy()])
+valPredict      = scaler_out.inverse_transform(valPredict)
+valY_inv        = scaler_out.inverse_transform([valY.numpy()])
+testPredict     = scaler_out.inverse_transform(testPredict)
+testY_inv       = scaler_out.inverse_transform([testY.numpy()])
 
 # calculate root mean squared error
 trainScore = math.sqrt(mean_squared_error(trainY_inv[0], trainPredict[:, 0]))
 print('Train Score: %.2f RMSE' % (trainScore))
+valScore = math.sqrt(mean_squared_error(valY_inv[0], valPredict[:, 0]))
+print('Val Score: %.2f RMSE' % (valScore))
 testScore = math.sqrt(mean_squared_error(testY_inv[0], testPredict[:, 0]))
 print('Test Score: %.2f RMSE' % (testScore))
 
+# Plot test and validation results from the model
+fig, ax = plt.subplots(figsize=(10, 6), dpi = 100) # dpi = 500 for saves
+X = np.arange(len(val_scores))
+y = val_scores
+z = train_scores
+# Plotting both the curves simultaneously
+plt.plot(X, y, color='r', label='Validation loss')
+plt.plot(X, z, color='g', label='Train loss') 
+# Naming the x-axis, y-axis and the whole graph
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.title("Train and validation loss")
+plt.legend()
+plt.show()
+#plt.savefig('Trainloss.png')
 
 ## -------------------------------  PREDICT -----------------------------------
-predict_from_day = train_to_date
-
+predict_from_idx = test_start_idx
 model=net
 
-
 starttime = time.time()
-# Load the dataset:
-dataset.reset_index(drop=True, inplace=True)
-dataframe_full = pd.DataFrame(dataset)
-dataframe = pd.DataFrame(dataframe_full[features_used])
-dataset_used = dataframe.values
-dataset_used = dataset_used.astype('float32')
 
-# Get test data
-predict_from_idx = dataset.index[(dataset['Year'] == int(predict_from_day[0:4])) &
-                                 (dataset['Month'] == int(predict_from_day[5:7])) &
-                                 (dataset['Day'] == int(predict_from_day[-2:]))][0]
-
-train, test = dataset_used[0:predict_from_idx, :], dataset_used[predict_from_idx:len(dataset_used),:]
-
-# Scale the dataset (*after splitting)
-scaler_out, scaler_feat = MinMaxScaler(feature_range=(0, 1)), MinMaxScaler(feature_range=(0, 1))
-train_price_scaled = scaler_out.fit_transform(train[:, :1])
-train_feat_scaled = scaler_feat.fit_transform(train[:, 1:])
-test_price_scaled = scaler_out.transform(test[:, :1])
-test_feat_scaled = scaler_feat.transform(test[:, 1:])
-train = np.column_stack((train_price_scaled, train_feat_scaled))
-test = np.column_stack((test_price_scaled, test_feat_scaled))
-
-# # make predictions (recursively) on features
-# pred_feat = pd.DataFrame()
-# for i in np.arange(len(features_used) - 1):
-#     # Create pandas dataframe of size (lookback+1)*length of train
-#     df = pd.DataFrame(columns=range(look_back + 1), index=range(len(train) - look_back - hours_ahead + 1))
-#     # Insert first column (our Y-vector)
-#     df.iloc[:, :1] = train[look_back + hours_ahead - 1:, i + 1].reshape(-1, 1)
-#     # Insert the previous look_back values (X-matrix)
-#     for j in np.arange(len(df)):
-#         df.iloc[j, 1:look_back + 1] = train[j:j + look_back, i + 1]
-
-#     # Prepare data for model
-#     X_train = df.iloc[:, 1:].astype(float)
-#     y_train = df.iloc[:, :1].values.astype(float).reshape(len(X_train))
-    
-#     # create regressor object
-#     regressor = RandomForestRegressor(n_estimators = 100, random_state = 0)
-    
-#     # fit the regressor with x and y data
-#     regressor.fit(X_train, y_train)
-
-#     # Make predictions (on future):
-#     pred_recursive_test = train[-(look_back+hours_ahead-1):,i+1].reshape(-1, 1)
-
-#     for k in np.arange(len(test)):
-#         pred_shift_test = scaler_feat.transform(dataset_used[predict_from_idx-look_back-hours_ahead+1+k:predict_from_idx-look_back-hours_ahead+6+k,1:])
-#         pred_shift_test = pred_shift_test[:,i].reshape(-1,1)
-#         input = pd.DataFrame(pred_shift_test[-look_back:].reshape(1, -1))
-#         input.columns = pd.RangeIndex(start=1, stop=look_back + 1, step=1)
-#         tmp_out = regressor.predict(input).reshape(1, -1)
-        
-#         pred_recursive_test = np.concatenate((pred_recursive_test, tmp_out), axis=0)
-        
-#     pred_feat = pd.concat([pred_feat, pd.DataFrame(pred_recursive_test[look_back+hours_ahead-1:])], axis=1)
-#     print('Feature %s is done' % (i + 1))
-
-# Predictions of prices
-
-pred_recursive_test = train[-(look_back+hours_ahead-1):,:]
-pred_recursive_test_price = pred_recursive_test[:,0]
+pred_recursive_test         = val[-(look_back+hours_ahead-1):,:]
+pred_recursive_test_price   = pred_recursive_test[:,0]
 
 for k in np.arange(len(test)):
     pred_shift_test_feat = scaler_feat.transform(dataset_used[predict_from_idx-look_back-hours_ahead+1+k:predict_from_idx-hours_ahead+1+k,1:])
@@ -227,22 +222,34 @@ name = 'plot'
 view = 2000
 dates_between_ticks = 100
 
-# Load the dataset:
-dataset.reset_index(drop=True, inplace=True)
-dataframe_full = pd.DataFrame(dataset)
-dataframe = pd.DataFrame(dataframe_full[features_used])
-dataset_used = dataframe.values
-dataset_used = dataset_used.astype('float32')
+splitpoint = test_start_idx
 
-splitpoint = dataset.index[(dataset['Year'] == int(predict_from_day[0:4])) &
-                            (dataset['Month'] == int(predict_from_day[5:7])) &
-                            (dataset['Day'] == int(predict_from_day[-2:]))][0]
+with torch.no_grad():
+    val_predictions   = model(valX).numpy()
+    train_predictions = model(trainX).numpy()
 
+#trainX[0,:,1:3]
+#scaler_feat.transform(dataset_used[:look_back,1:])[:,:2]
+#dataset['CET'][:look_back]
+
+train_predictions_inv = scaler_out.inverse_transform(train_predictions)
+val_predictions_inv   = scaler_out.inverse_transform(val_predictions)
+
+trainPredictPlot = np.empty_like(dataset_used[:, :1])
+trainPredictPlot[:, :] = np.nan
+valPredictPlot = np.empty_like(dataset_used[:, :1])
+valPredictPlot[:, :] = np.nan
 testPredictPlot = np.empty_like(dataset_used[:, :1])
 testPredictPlot[:, :] = np.nan
+
+for i in np.arange(len(train_predictions_inv[::hours_ahead])-1):
+    trainPredictPlot[-1+look_back+(i+1)*hours_ahead:-1+look_back+(i+2)*hours_ahead] = train_predictions_inv[i*hours_ahead]
+for i in np.arange(len(val_predictions_inv[::hours_ahead])-1):
+    valPredictPlot[val_start_idx-1+look_back+(i+1)*hours_ahead:val_start_idx-1+look_back+(i+2)*hours_ahead] = val_predictions_inv[i*hours_ahead]
 for i in np.arange(len(predictions[::hours_ahead])):
     testPredictPlot[splitpoint+i*hours_ahead:splitpoint+(i+1)*hours_ahead,:] = predictions[1+i*hours_ahead]
 
+# pd.DataFrame(trainPredictPlot[:40])
 # testPredictPlot[splitpoint-1:splitpoint+24,:]
 # predictions[:24]
 #testPredictPlot[splitpoint-1:splitpoint+len(predictions)-1, :] = predictions
@@ -261,12 +268,16 @@ x_ticks = np.linspace(start=xrangemin, stop=xrangemax, num=len(dates_between))
 # Short period (After traindata ends)
 dpi = 500 if save == 'yes' else 130
 fig, ax = plt.subplots(figsize=(8, 5), dpi = dpi)
-plt.plot(dataset_used[:, :1], label='Observations', color = 'b')
-plt.plot(testPredictPlot, label='Predict: Test', color = 'r')
+plt.plot(dataset_used[:, :1], label='Observations', color = 'blue')
+plt.plot(trainPredictPlot, label='Predict: Train', color = 'orange')
+plt.plot(valPredictPlot, label='Predict: Val', color = 'red')
+plt.plot(testPredictPlot, label='Predict: Test', color = 'green')
 ax.legend(loc='upper left', frameon=False)
 plt.title(str(dataset['Name'][0]) + ' ' + str(dataset['Type'][0]) + ' predictions \n ' + 'Lookback: ' + str(look_back) + ', Hidden states: '+ str(size_hidden) + ', Epochs: ' + str(num_epochs) + ', Penalty: ' + str(pen_negativity_factor) )
 #fig.suptitle('This sentence is\nbeing split\ninto three lines')
-plt.axvline(x = splitpoint-1, color = 'r', linestyle = '-')
+plt.axvline(x = train_end_idx-1, color = 'black', linestyle = '-')
+plt.axvline(x = val_start_idx-1, color = 'black', linestyle = '-')
+plt.axvline(x = splitpoint-1, color = 'black', linestyle = '-')
 #plt.text(splitpoint+200,8000, str(splitdate),rotation=0)
 plt.xlim([xrangemin, xrangemax])
 plt.xticks(x_ticks[::dates_between_ticks], dates_between[::dates_between_ticks], rotation=30)
@@ -300,7 +311,7 @@ print(' --- On average our predictions are ' + str(mean_pct_afv) + ' %' + ' away
 
 np.mean(np.abs(result['Diff']))  # 110.18268819192836
 
-result.to_csv('FTSE_8ha_pred_v1.txt', index = False, header = True)
+result.to_csv('Oil_8ha_pred_v1.txt', index = False, header = True)
 
 os.chdir("/Users/mathiasfrederiksen/Desktop/Forsikringsmatematik/5. år/Applied Machine Learning/Data/SwissData/Predictions")
 
@@ -316,7 +327,8 @@ os.chdir("/Users/mathiasfrederiksen/Desktop/Forsikringsmatematik/5. år/Applied 
 
 
 # CHANGES TO FIT LASSES DATAKRAV
-tmp = pd.read_csv('SP_8ha_pred_v1.txt', index_col=None, parse_dates=['CET'], engine='python')
+os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData/Predictions")
+tmp = pd.read_csv('DAX_8ha_pred_v2.txt', index_col=None, parse_dates=['CET'], engine='python')
 
 daxdatah    = idxdatah[idxdatah['Name'] == 'DAX']
 spdatah     = idxdatah[idxdatah['Name'] == 'S&P']
@@ -324,7 +336,7 @@ nasdaqdatah = idxdatah[idxdatah['Name'] == 'NASDAQ']
 hkdatah     = idxdatah[idxdatah['Name'] == 'HK']
 ftsedatah   = idxdatah[idxdatah['Name'] == 'FTSE']
 
-dataset = spdatah
+dataset = daxdatah
 dataset.reset_index(drop=True, inplace=True)
 splitdate = '2021-06-30'
 splitpoint = dataset.index[(dataset['Year'] == int(splitdate[0:4])) &
@@ -357,9 +369,9 @@ result[columns[4]]  = np.nan
 
 result = pd.concat([result,tmp])
 
-result[900:930]
+result[880:930]
 result.reset_index(inplace=True, drop=True)
 
-result.to_csv('SP_8ha_pred_v1.txt', index = False, header = True)
+result.to_csv('DAX_8ha_pred_v2.txt', index = False, header = True)
 
 
