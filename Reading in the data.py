@@ -36,14 +36,36 @@ valutadatahour['Name'].value_counts()
 
 ## ------------------------ Data read for predictions ----------------------------------------
 os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData/predictions")
-DAX_8ha = pd.read_csv("DAX_8ha_pred_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
-SP_8ha = pd.read_csv("SP_8ha_pred_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
-NAS_8ha = pd.read_csv("NASDAQ_8ha_pred_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
-HK_8ha = pd.read_csv("HK_8ha_pred_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+DAX_8ha     = pd.read_csv("DAX_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+SP_8ha      = pd.read_csv("SP_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+NAS_8ha     = pd.read_csv("NASDAQ_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+HK_8ha      = pd.read_csv("HK_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+FTSE_8ha    = pd.read_csv("FTSE_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+EUR_8ha     = pd.read_csv("EURUSD_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+BIT_8ha     = pd.read_csv("BITCOIN_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+ETH_8ha     = pd.read_csv("ETHER_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+COF_8ha     = pd.read_csv("COFFEE_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+GAS_8ha     = pd.read_csv("GAS_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
+OIL_8ha     = pd.read_csv("OIL_8ha_pred_val_v2.txt", index_col=None, parse_dates=['CET'], engine='python')
 
-
-datapred = pd.concat([DAX_8ha, SP_8ha, NAS_8ha, HK_8ha])
+datapred = pd.concat([DAX_8ha, SP_8ha, NAS_8ha, HK_8ha, FTSE_8ha, EUR_8ha, BIT_8ha, ETH_8ha, COF_8ha, GAS_8ha, OIL_8ha])
 datapred.columns = ['CET', 'Name', 'Close', 'Predictions', 'Diff']
+
+os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData/predictions")
+DAX_8ha     = pd.read_csv("DAX_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+SP_8ha      = pd.read_csv("SP_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+NAS_8ha     = pd.read_csv("NAS_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+HK_8ha      = pd.read_csv("HK_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+FTSE_8ha    = pd.read_csv("FTSE_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+EUR_8ha     = pd.read_csv("EURUSD_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+BIT_8ha     = pd.read_csv("BITCOIN_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+ETH_8ha     = pd.read_csv("ETHER_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+COF_8ha     = pd.read_csv("COFFEE_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+GAS_8ha     = pd.read_csv("GAS_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+OIL_8ha     = pd.read_csv("OIL_8ha_pred_lr_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+
+datapred2 = pd.concat([DAX_8ha, SP_8ha, NAS_8ha, HK_8ha, FTSE_8ha, EUR_8ha, BIT_8ha, ETH_8ha, COF_8ha, GAS_8ha, OIL_8ha])
+datapred2.columns = ['CET', 'Name', 'Close', 'Predictions', 'Diff']
 
 
 

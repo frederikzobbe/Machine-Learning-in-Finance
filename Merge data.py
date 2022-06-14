@@ -23,7 +23,7 @@ os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applie
 #os.chdir(r"C:\Users\Bruger\Documents\Google_Drev_data\SwissData")
 
 # 5. Read in primary data
-df = pd.read_csv('CommoDataHour.txt', index_col=None, parse_dates=['CET'], engine='python')
+df = pd.read_csv('ValutaDataHour.txt', index_col=None, parse_dates=['CET'], engine='python')
 
 # 6. Define functions
 def ROC(df, unit):
@@ -90,17 +90,16 @@ ROC_15 = ROC(df, 15)
 ROC_20 = ROC(df, 20)        
 
 EMA_10 = EMA(df, 5)
-EMA_50 = EMA(df, 10)
-EMA_200 = EMA(df, 15)
+EMA_50 = EMA(df, 50)
+EMA_200 = EMA(df, 200)
 
 df_dummy1 = pd.DataFrame({'ROC-5' : ROC_5, 'ROC-10' : ROC_10, 'ROC-15' : ROC_15, 'ROC-20' : ROC_20})
-df_dummy2 = pd.DataFrame({'EMA-5' : EMA_10, 'EMA_50' : EMA_50, 'EMA_200' : EMA_200})
+df_dummy2 = pd.DataFrame({'EMA-5' : EMA_10, 'EMA-50' : EMA_50, 'EMA-200' : EMA_200})
 df = pd.concat([df,df_dummy1, df_dummy2], axis = 1)
-df = logreturn(df)
 
 # 8. Merge Storebæltsbrodata and forbrugerprisindeks på data
 merged_df = df.merge(df_SB, how = 'inner', on = ['Year', 'Month'])
 merged_df = merged_df.merge(df_FB_index, how = 'inner', on = ['Year', 'Month'])
 #merged_df1 = merged_df.merge(df_PE, how = 'inner', on = ['Year', 'Month', 'Name']) # Only for indexdata
 
-merged_df.to_csv('CommoDataHour_v3.txt', index = False, header=True)
+merged_df.to_csv('ValutaDataHour_v3.txt', index = False, header=True)

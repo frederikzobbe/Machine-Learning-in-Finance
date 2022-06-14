@@ -1,10 +1,24 @@
+# 1. Reading in packages
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import time as time
 
+mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=["#013c9b",# my Blue
+                                                    "#f6960a",# my Orange
+                                                    "#e0012e",# my Red
+                                                    "#80cd59",# my Green
+                                                    "#4f94d4",# my Light Blue
+                                                    "#ffd800",# my Yellow
+                                                    "#6f7072",# my Grey
+                                                    ])
 
 def hour_to_day(x: pd.DataFrame):
 
     starttime = time.time()
     
-    x.reset_index(inplace=True, drop=False)
+    x.reset_index(inplace=True, drop=True)
 
     x['Hour']   = x['CET'].dt.hour
     x['Date']   = [str(date)[:10] for date in x['CET']]
@@ -45,7 +59,13 @@ def hour_to_day(x: pd.DataFrame):
             
             idxs_all.append( (x[(x['Name'] == names[i+1]) & (x['Date'] == d)].index)[place].item() ) 
     
-    x.drop("index", axis=1, inplace=True)
+    Close_8hb = pd.DataFrame()
+    for name in names:
+        tmp = x[x['Name'] == name]['Close'].shift(1).fillna(0)
+        Close_8hb = pd.concat([Close_8hb, tmp])
+    
+    x['Close_8hb'] = Close_8hb
+
     x.drop("Hour", axis=1, inplace=True)
     
     # Ends the timer
@@ -54,7 +74,6 @@ def hour_to_day(x: pd.DataFrame):
     print(' --- The function hour_to_day took %s seconds to run ---' %round(dur,2))
 
     return x.iloc[idxs_all,:].sort_values(by=['CET']).reset_index(drop=True)
-
 
 def afkast(data, begin_CET, pred_true, date_cet = 'CET'): #predict data
     
@@ -76,14 +95,13 @@ def afkast(data, begin_CET, pred_true, date_cet = 'CET'): #predict data
             
             ret = []
             for i in np.arange(len(df)-1):
-                ret.append((df['Predictions'][i+1]- df['Close'][i])/df['Close'][i])
+                ret.append((df['Predictions'][i+1]- df['Close_8hb'][i+1])/df['Close_8hb'][i+1])
             
             stock_returns[name] = np.array(ret)
     
         stock_returns = stock_returns.dropna() # drop the first row.'
         
     else:
-        
         for name in pd.unique(data['Name']):
             df_name = data[data['Name'] == name].reset_index(drop = True)
             df_sub = df_name.merge(df_uniq, how = 'inner', on = [date_cet])
@@ -91,8 +109,8 @@ def afkast(data, begin_CET, pred_true, date_cet = 'CET'): #predict data
             df = df_sub.iloc[idx-1:,:].reset_index(drop = True)
             
             ret = []
-            for i in np.arange(len(df)-1):
-                ret.append((df['Close'][i+1]- df['Close'][i])/df['Close'][i])
+            for i in np.arange(len(df)-2):
+                ret.append((df['Close_8hb'][i+2]- df['Close_8hb'][i+1])/df['Close_8hb'][i+1])
             
             stock_returns[name] = np.array(ret)
     
@@ -101,7 +119,6 @@ def afkast(data, begin_CET, pred_true, date_cet = 'CET'): #predict data
     return stock_returns
 
 # Historical volatility
-
 def volatility(data, begin_CET, pred_true, date_cet = 'CET'): #predict data, need CET, Name, Close, pred
     
     df_vol = pd.DataFrame()
@@ -221,19 +238,21 @@ def calmar_ratio(data, rf):
 #     sharpe = (cagr(df) - rf)/ volatility(df)
 #     return sharpe
 
-numAssets=2
+annual_business_days = 200
+numAssets=5
 numRev=2
-vol_penalty_factor=0.5
+vol_penalty_factor=0#.5
+datapred3 = datapred.copy()
+datapred3['Predictions'] = datapred3[datapred3['Diff'].notnull()]['Close']
 
 # Load data to day-data (re-balancing once a day)
-pred_data = hour_to_day(datapred.copy())
+pred_data = hour_to_day(datapred2.copy())
 
 ## Pred, the return our prediction say we would get
-begin_date = '2021-06-30'
+begin_date = '2021-04-01'
 returns_pred = afkast(data=pred_data, begin_CET=begin_date, pred_true='TRUE', date_cet='Date')
 vol_pred = volatility(data=pred_data, begin_CET=begin_date, pred_true='TRUE', date_cet='Date')
 rebalanced_portfolio_pred, assets_list = portfolio(data=returns_pred, numAssets=numAssets, numRev=numRev, data_vol=vol_pred, vol_penalty_factor=vol_penalty_factor)
-
 
 ## How we really should invest, if we followed our strategy
 returns_true = afkast(data=pred_data, begin_CET=begin_date, pred_true='FALSE', date_cet='Date')
@@ -242,14 +261,11 @@ vol_true = volatility(data=pred_data, begin_CET=begin_date, pred_true='FALSE', d
 benchmark = pd.DataFrame()
 benchmark['daily_returns'] = np.array(returns_true.mean(axis=1))
 
-
 ## The return we really get from Pred
 real_avg_daily_ret_from_pred_result = [0]
 for i in np.arange(returns_true.shape[0]):
     real_avg_daily_ret_from_pred_result.append(returns_true[assets_list.iloc[i,:]].iloc[i,:].mean()) #probably not good
 real_df = pd.DataFrame(np.array(real_avg_daily_ret_from_pred_result),columns=["daily_returns"])   
-
-
 
 print("Rebalanced Portfolio Performance - How we hope (predicted) it went")
 print("CAGR: " + str(cagr(rebalanced_portfolio_pred)))
@@ -272,16 +288,57 @@ print("Calmar Ratio: " + str(calmar_ratio(benchmark, 0.03)))
 
 
 
-fig, ax = plt.subplots()
+
+
+os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData")
+MWL_v1     = pd.read_csv("MWL_v1.txt", index_col=None, parse_dates=['CET'], engine='python')
+MWL_v1['Close'].pct_change()
+
+MWL_v1['Predictions'] = MWL_v1['Close']
+MWL_v1['Name'] = 'MSCI World Index'
+
+
+pred_data.head(20)
+
+dates_between1 = pred_data['CET']
+dates_between1 = np.unique([str(date)[:10] for date in dates_between1])
+MWL_v1 = MWL_v1[MWL_v1['CET'].isin(dates_between1)]
+
+dates_between2 = MWL_v1['CET']
+dates_between2 = np.unique([str(date)[:10] for date in dates_between2])
+MWL_v1 = MWL_v1[MWL_v1['CET'].isin(dates_between2)]
+
+MSCI = afkast(data=MWL_v1, begin_CET=begin_date, pred_true='TRUE', date_cet='CET')
+
+(1+returns_true).cumprod()
+pd.DataFrame(np.array(assets_list).reshape(assets_list.shape[0]*assets_list.shape[1])).value_counts()
+pred_data[(pred_data['Name'] == 'COFFEE')][790:820]
+returns_pred
+
+set(dates_between1) - set(dates_between2) 
+(1+MSCI).cumprod()
+
+
+#lrcumprod = real_df # logreturn 
+#pricecumprod = real_df
+#powportfolio =real_df
+#fig, ax = plt.subplots(figsize=(8,5), dpi=500)
+fig, ax = plt.subplots(figsize=(8,5), dpi=130)
 #plt.plot((1+rebalanced_portfolio_pred).cumprod())
-plt.plot((1+real_df).cumprod())
-plt.plot((1+benchmark).cumprod())
+#plt.plot((1+powportfolio).cumprod(), label = "Real Strategy Return: Best asset")
+plt.plot((1+pricecumprod).cumprod(), label = "Real Strategy Return: Price model")
+plt.plot((1+lrcumprod).cumprod(), label = 'Real Strategy Return: Logreturn model')
+plt.plot((1+benchmark).cumprod(), label = 'Benchmark Return')
+plt.plot((1+MSCI).cumprod(), label = 'MSCI World Index')
 plt.title("Benchmark vs Rebalancing Strategy Return")
 plt.ylabel("Cumulative return")
-plt.xlabel("Days")
+plt.xlabel("Business Days")
 plt.axhline(y=1, ls='--', c='grey')
-ax.legend(["Real Strategy Return", "Benchmark Return"])
+plt.axhline(y=1.5, ls='--', c='grey')
+ax.legend(loc='upper left')
 #ax.legend(["Strategy Return", "Real Strategy Return", "Benchmark Return"])
+#plt.show()
+plt.savefig('Benchmark vs Rebalancing Strategy Return.png')
 
 
 

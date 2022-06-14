@@ -11,6 +11,16 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import math
+import matplotlib as mpl
+
+mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=["#013c9b",# my Blue
+                                                    "#f6960a",# my Orange
+                                                    "#e0012e",# my Red
+                                                    "#80cd59",# my Green
+                                                    "#4f94d4",# my Light Blue
+                                                    "#ffd800",# my Yellow
+                                                    "#6f7072",# my Grey
+                                                    ])
 
 # Function: Create dataset for a pytorch
 def create_dataset(dataset, look_back=1, hours_ahead=1):
@@ -22,17 +32,8 @@ def create_dataset(dataset, look_back=1, hours_ahead=1):
     return np.array(dataX), np.array(dataY)
 
 valutadatahour['Name'].value_counts()
-dataset      = valutadatahour[valutadatahour['Name'] == 'ETHER']
+dataset      = valutadatahour[valutadatahour['Name'] == 'BITCOIN']
 dataset.columns.sort_values()
-
-df = dataset.copy()
-df.index = df["CET"]
-df.sort_index(inplace=True)
-df['Close'].plot()
-plt.axvline(x='2020-02-01')
-plt.axvline(x='2020-06-01')
-plt.axvline(x='2021-04-01')
-plt.show()
 
 train_end_date  = '2020-01-31'
 val_start_date  = '2020-06-01'
@@ -40,7 +41,9 @@ test_start_date = '2021-04-01'
 test_end_date   = '2022-04-29'
 
 features_all = list(['Close']) + list(set(list(dataset.columns)) - set(list(['Open', 'High', 'Low', 'Name', 'Type', 'CET', 'Minute', 'Close'])))
-features_tmp =['Close', 'Volume', 'Hour', 'ROC-5', 'ROC-20', 'EMA-5', 'EMA-50', 'EMA-200']
+features_tmp =['Close', 'Volume', 'Hour', 'ROC-5', 'ROC-20', 'EMA-5', 'EMA-50', 'EMA-200'] #EMA-5
+
+pd.DataFrame(set(list(dataset.columns)))
 
 look_back                  = 40
 size_hidden                = 100
@@ -169,7 +172,8 @@ testScore = math.sqrt(mean_squared_error(testY_inv[0], testPredict[:, 0]))
 print('Test Score: %.2f RMSE' % (testScore))
 
 # Plot test and validation results from the model
-fig, ax = plt.subplots(figsize=(10, 6), dpi = 100) # dpi = 500 for saves
+fig, ax = plt.subplots(figsize=(8, 5), dpi = 500) # dpi = 500 for saves
+#fig, ax = plt.subplots(figsize=(8, 5), dpi = 130) # dpi = 500 for saves
 X = np.arange(len(val_scores))
 y = val_scores
 z = train_scores
@@ -179,10 +183,10 @@ plt.plot(X, z, color='g', label='Train loss')
 # Naming the x-axis, y-axis and the whole graph
 plt.xlabel("Epochs")
 plt.ylabel("Loss")
-plt.title("Train and validation loss in LSTM NN \n " + 'Asset: ' + str(dataset['Name'][0]))
+plt.title("BITCOIN")
 plt.legend()
-plt.show()
-#plt.savefig('TrainlossDAX.png')
+#plt.show()
+plt.savefig('TrainlossBITCOIN.png')
 
 ## -------------------------------  PREDICT -----------------------------------
 predict_from_idx = test_start_idx
@@ -256,24 +260,24 @@ dates_between = np.unique([str(date)[:10] for date in dates_between])
 x_ticks = np.linspace(start=xrangemin, stop=xrangemax, num=len(dates_between))
 
 # Short period (After traindata ends)
-dpi = 500 if save == 'yes' else 130
-fig, ax = plt.subplots(figsize=(8, 5), dpi = dpi)
-plt.plot(dataset_used[:, :1], label='Observations', color = 'blue')
-plt.plot(trainPredictPlot, label='Predict: Train', color = 'orange')
-plt.plot(valPredictPlot, label='Predict: Val', color = 'red')
-plt.plot(testPredictPlot, label='Predict: Test', color = 'green')
+#fig, ax = plt.subplots(figsize=(8, 5), dpi = 130)
+fig, ax = plt.subplots(figsize=(8, 5), dpi = 500)
+plt.plot(dataset_used[:, :1], label='Observations')
+plt.plot(trainPredictPlot, label='Predict: Train')
+plt.plot(valPredictPlot, label='Predict: Val')
+plt.plot(testPredictPlot, label='Predict: Test')
 ax.legend(loc='upper left', frameon=False)
-plt.title(str(dataset['Name'][0]) + ' ' + str(dataset['Type'][0]) + ' predictions \n ' + 'Lookback: ' + str(look_back) + ', Hidden states: '+ str(size_hidden) + ', Epochs: ' + str(num_epochs) + ', Penalty: ' + str(pen_negativity_factor) )
+plt.title('BITCOIN' +' predictions')
 #fig.suptitle('This sentence is\nbeing split\ninto three lines')
-plt.axvline(x = train_end_idx-1, color = 'black', linestyle = '-')
-plt.axvline(x = val_start_idx-1, color = 'black', linestyle = '-')
-plt.axvline(x = splitpoint-1, color = 'black', linestyle = '-')
+plt.axvline(x = train_end_idx-1, color = 'grey', linestyle = '--')
+plt.axvline(x = val_start_idx-1, color = 'grey', linestyle = '--')
+plt.axvline(x = splitpoint-1, color = 'grey', linestyle = '--')
 #plt.text(splitpoint+200,8000, str(splitdate),rotation=0)
 plt.xlim([xrangemin, xrangemax])
 plt.xticks(x_ticks[::dates_between_ticks], dates_between[::dates_between_ticks], rotation=30)
 plt.ylim([min(dataset_used[xrangemin:xrangemax,0])*0.95, max(dataset_used[xrangemin:xrangemax,0])*1.05])
-
-plt.savefig(str(name) + '.png') if (save == 'yes') else plt.show()
+#plt.show()
+plt.savefig('predictionBITCOIN_price_test.png')
 
 
 # ------------------------------- SAVE DATA ----------------------------------
