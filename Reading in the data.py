@@ -45,6 +45,22 @@ HK_8ha = pd.read_csv("HK_8ha_pred_v1.txt", index_col=None, parse_dates=['CET'], 
 datapred = pd.concat([DAX_8ha, SP_8ha, NAS_8ha, HK_8ha])
 datapred.columns = ['CET', 'Name', 'Close', 'Predictions', 'Diff']
 
++## ----------------------- IndexData dollarbar -------------------------------
+
+IndexdataHour_DB = pd.read_csv("IndexDataHourly_DB", index_col=None, parse_dates=['CET'], engine='python')
+
+## ---------------------- IndexData20min -------------------------------------------------------------
+IndexDat20Min = pd.read_csv("20MinIndexData", index_col=None, parse_dates=['CET'], engine='python')
+IndexDat20Min = IndexDat20Min.drop(["Gmt time"], axis = 1) # to ensure consistency with other datasets
+
+IndexDat20Min_DB = pd.read_csv("IndexData20Min_DB", index_col=None, parse_dates=['CET'], engine='python')
+
+IndexDat20Min_varying_DB = pd.read_csv('index_20min_varyingDB', index_col=None, parse_dates=['CET'], engine='python')
+
+## ------------------- PortfolioData 20min ----------------------------------------------------------------
+
+PortfolioDat = pd.read_csv('PortfolioData', index_col=None, parse_dates=['CET'], engine='python')
+
 
 
 
