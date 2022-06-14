@@ -21,16 +21,18 @@ def create_dataset(dataset, look_back=1, hours_ahead=1):
         dataY.append(dataset[i + look_back + hours_ahead - 1, 0])
     return np.array(dataX), np.array(dataY)
 
-dataset      = idxdatah[idxdatah['Name'] == 'DAX']
+valutadatahour['Name'].value_counts()
+dataset      = valutadatahour[valutadatahour['Name'] == 'ETHER']
+dataset.columns.sort_values()
 
-#df = dataset1.copy()
-#df.index = df["CET"]
-#df.sort_index(inplace=True)
-#df['Close'].plot()
-#plt.axvline(x='2020-02-01')
-#plt.axvline(x='2020-06-01')
-#plt.axvline(x='2021-04-01')
-#plt.show()
+df = dataset.copy()
+df.index = df["CET"]
+df.sort_index(inplace=True)
+df['Close'].plot()
+plt.axvline(x='2020-02-01')
+plt.axvline(x='2020-06-01')
+plt.axvline(x='2021-04-01')
+plt.show()
 
 train_end_date  = '2020-01-31'
 val_start_date  = '2020-06-01'
@@ -38,16 +40,15 @@ test_start_date = '2021-04-01'
 test_end_date   = '2022-04-29'
 
 features_all = list(['Close']) + list(set(list(dataset.columns)) - set(list(['Open', 'High', 'Low', 'Name', 'Type', 'CET', 'Minute', 'Close'])))
-#train_to_date ='2021-06-30'
-#features_used =['Close', 'Volume', 'Hour', 'ROC-5', 'ROC-20', 'EMA-10', 'EMA-200', 'Moterbike and car <3m', 'Car 3-6m', 'Total', '00 CPI Total', '01.1 Food']
+features_tmp =['Close', 'Volume', 'Hour', 'ROC-5', 'ROC-20', 'EMA-5', 'EMA-50', 'EMA-200']
 
-look_back                  = 100
-size_hidden                = 50
+look_back                  = 40
+size_hidden                = 100
 learning_rate              = 0.005
-num_epochs                 = 200
-pen_negativity_factor      = 1.4
-hours_ahead                = 12
-features_used              = features_all
+num_epochs                 = 100
+pen_negativity_factor      = 1
+hours_ahead                = 8
+features_used              = features_tmp
 
 # Load the dataset:
 dataset.reset_index(drop=True, inplace=True)
@@ -178,10 +179,10 @@ plt.plot(X, z, color='g', label='Train loss')
 # Naming the x-axis, y-axis and the whole graph
 plt.xlabel("Epochs")
 plt.ylabel("Loss")
-plt.title("Train and validation loss")
+plt.title("Train and validation loss in LSTM NN \n " + 'Asset: ' + str(dataset['Name'][0]))
 plt.legend()
 plt.show()
-#plt.savefig('Trainloss.png')
+#plt.savefig('TrainlossDAX.png')
 
 ## -------------------------------  PREDICT -----------------------------------
 predict_from_idx = test_start_idx
@@ -212,7 +213,6 @@ print('Done predicting!')
 endtime = time.time()
 dur = endtime - starttime
 print(' --- The function LSTM_predict_recal took %s minutes to run ---' % (round(dur/60,2)) )
-
 
 # -----------------------------  PLOT  --------------------------------------
 
@@ -249,19 +249,9 @@ for i in np.arange(len(val_predictions_inv[::hours_ahead])-1):
 for i in np.arange(len(predictions[::hours_ahead])):
     testPredictPlot[splitpoint+i*hours_ahead:splitpoint+(i+1)*hours_ahead,:] = predictions[1+i*hours_ahead]
 
-# pd.DataFrame(trainPredictPlot[:40])
-# testPredictPlot[splitpoint-1:splitpoint+24,:]
-# predictions[:24]
-#testPredictPlot[splitpoint-1:splitpoint+len(predictions)-1, :] = predictions
-#splitdate = dataframe_full[dataframe_full.index == splitpoint]['CET'].dt.date.item().strftime('%d %b %Y')
-
-#xrangemin, xrangemax = splitpoint-view, splitpoint+2*view
 xrangemin, xrangemax = 0, len(testPredictPlot)
 dates_between = dataset['CET'][xrangemin:xrangemax]
 dates_between = np.unique([str(date)[:10] for date in dates_between])
-
-#date_index = pd.date_range(start=x_start_date, end=x_end_date, freq="D")
-#date_index = [str(date)[:10] for date in date_index]
 
 x_ticks = np.linspace(start=xrangemin, stop=xrangemax, num=len(dates_between))
 
@@ -311,7 +301,7 @@ print(' --- On average our predictions are ' + str(mean_pct_afv) + ' %' + ' away
 
 np.mean(np.abs(result['Diff']))  # 110.18268819192836
 
-result.to_csv('Oil_8ha_pred_v1.txt', index = False, header = True)
+result.to_csv('ETHER_8ha_pred_val_v1.txt', index = False, header = True)
 
 os.chdir("/Users/mathiasfrederiksen/Desktop/Forsikringsmatematik/5. år/Applied Machine Learning/Data/SwissData/Predictions")
 
@@ -328,17 +318,23 @@ os.chdir("/Users/mathiasfrederiksen/Desktop/Forsikringsmatematik/5. år/Applied 
 
 # CHANGES TO FIT LASSES DATAKRAV
 os.chdir("/Users/frederikzobbe/Documents/Universitet/Forsikringsmatematik/Applied Machine Learning/Final project/Final project data/SwissData/Predictions")
-tmp = pd.read_csv('DAX_8ha_pred_v2.txt', index_col=None, parse_dates=['CET'], engine='python')
-
 daxdatah    = idxdatah[idxdatah['Name'] == 'DAX']
 spdatah     = idxdatah[idxdatah['Name'] == 'S&P']
 nasdaqdatah = idxdatah[idxdatah['Name'] == 'NASDAQ']
 hkdatah     = idxdatah[idxdatah['Name'] == 'HK']
 ftsedatah   = idxdatah[idxdatah['Name'] == 'FTSE']
+eurusddatah   = valutadatahour[valutadatahour['Name'] == 'EUROUSD']
+bitcoindatah  = valutadatahour[valutadatahour['Name'] == 'BITCOIN']
+etherdatah    = valutadatahour[valutadatahour['Name'] == 'ETHER']
+coffeedatah   = commodatahour[commodatahour['Name'] == 'COFFEE']
+oildatah      = commodatahour[commodatahour['Name'] == 'OIL']
+gasdatah      = commodatahour[commodatahour['Name'] == 'GAS']
 
-dataset = daxdatah
+tmp = pd.read_csv('GAS_8ha_pred_val_v1.txt', index_col=None, parse_dates=['CET'], engine='python')
+
+dataset = gasdatah
 dataset.reset_index(drop=True, inplace=True)
-splitdate = '2021-06-30'
+splitdate = test_start_date
 splitpoint = dataset.index[(dataset['Year'] == int(splitdate[0:4])) &
                             (dataset['Month'] == int(splitdate[5:7])) &
                             (dataset['Day'] == int(splitdate[-2:]))][0]
@@ -346,7 +342,7 @@ dataset['CET'][splitpoint-1:splitpoint+1]
 
 dates_between = dataset['CET'][:splitpoint]
 dates_between = np.unique([str(date)[:10] for date in dates_between])
-
+len(dates_between)
 times, close = [], []
 
 for d in dates_between:
@@ -366,12 +362,11 @@ result[columns[2]]  = close
 result[columns[3]]  = np.nan
 result[columns[4]]  = np.nan
 
-
 result = pd.concat([result,tmp])
 
-result[880:930]
+result[len(dates_between)-2:len(dates_between)+2]
 result.reset_index(inplace=True, drop=True)
 
-result.to_csv('DAX_8ha_pred_v2.txt', index = False, header = True)
+result.to_csv('GAS_8ha_pred_val_v2.txt', index = False, header = True)
 
 
