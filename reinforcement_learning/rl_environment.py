@@ -77,7 +77,7 @@ class Rl_env():
         self.period_start+=1
         self.state = self.full_dataset.iloc[self.period_start:self.period_start+self.period_length]
         
-        self.state = scale_data(self.state,new_fit=True)
+        self.state = scale_data(self.scaler,self.state,new_fit=True)
 
 
     def get_rel_change(self,prediction_variable='Close'):
